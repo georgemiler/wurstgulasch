@@ -1,5 +1,5 @@
 import sqlite3 as database_of_choice
-from post import post
+from model import post
 
 class database_connection():
     def __init__(self, name=None, host=None, port=None, username=None, password=None, filename=None):
@@ -40,9 +40,7 @@ class database_connection():
         posts = []
 
         for line in results:
-            #post_id, timestamp, origin, content_type, content_string, source, description, reference, signature = line
-            #posts.append(post(post_id=post_id, timestamp=timestamp, content_type=content_type, content_string=content_string, source=source, description=description, reference=reference, signature=signature))
-            tmp = post(*line)
+            tmp = post.post(*line)
             posts.append(tmp)
 
-        return posts 
+        return posts
