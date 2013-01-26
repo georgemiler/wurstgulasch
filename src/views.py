@@ -1,4 +1,6 @@
 import os
+import random
+import time
 
 from werkzeug.wrappers import Response
 
@@ -22,12 +24,33 @@ def render_template(template_name, **context):
 def json_since(request, timestamp):
     posts = post.get_posts(since=timestamp)
     out = render_template(template_name="json.tpl", posts=posts)
-    return Response(out)
+    return Response(out, mimetype="text/plain")
 
 def json_last(request, count):
     posts = post.get_posts(count=count)
     out = render_template(template_name="json.tpl", posts=posts)
-    return Response(out)
+    return Response(out, mimetype="text/plain")
+
+def web_insert_post(request):
+    if request.method == "POST":
+        tmp = post.post(
+            post_id=random.randint(1,2**32),
+            timestamp=int(time.time()),
+            origin="http://dev.img.sft.mx/",
+            content_type=request.form['content_type'],
+            content_string=request.form['content_string'],
+            source=request.form['source'],
+            tags=None,
+            description=request.form['description'],
+            reference=None,
+            signature=None
+        )
+ 
+        post.insert_post(tmp) 
+        return Response('This was a triumph', mimetype="text/plain") 
+    else:
+        out = render_template('web_insert_post.html')
+        return Response(out, mimetype="text/html")
 
 def default(request):
     return Response('lol')

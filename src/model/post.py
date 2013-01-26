@@ -46,3 +46,10 @@ def get_posts(since=None, count=None):
         posts.append(tmp)
 
     return posts
+
+def insert_post(post):
+    db = database.database_connection(filename="lol.db")
+    cursor = db.connection.cursor()
+    
+    cursor.execute("INSERT INTO sftib_posts (post_id, timestamp, origin, content_type, content_string, source, description, reference, signature) VALUES (?,?,?,?,?,?,?,?,?)", (post.post_id, post.timestamp, post.origin, post.content_type, post.content_string, post.source, post.description, post.reference, post.signature))
+    db.connection.commit()
