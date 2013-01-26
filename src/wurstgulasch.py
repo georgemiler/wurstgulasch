@@ -35,4 +35,4 @@ class Wurstgulasch:
 
 if __name__ == "__main__":
     from werkzeug.serving import run_simple
-    run_simple('localhost', 5000, Wurstgulasch(), use_debugger=False) 
+    run_simple('localhost', 5000, Wurstgulasch(), use_debugger=True) 

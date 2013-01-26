@@ -22,7 +22,7 @@ def get_posts(since=None, count=None):
     if since == None and count == None:
         cursor.execute("SELECT * FROM sftib_posts ORDER BY timestamp;")  # TODO include tags
     elif since != None and count == None:
-        cursor.execute("SELECT * FROM sftib_posts WHERE timestamp > ? ORDER BY timestamp;", (timestamp,))
+        cursor.execute("SELECT * FROM sftib_posts WHERE timestamp > ? ORDER BY timestamp;", (since,))
     elif since == None and count != None:
         cursor.execute("SELECT * FROM sftib_posts ORDER BY timestamp LIMIT ?", (count,))
     else:
