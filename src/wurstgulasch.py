@@ -2,10 +2,15 @@ from werkzeug.wrappers import Request, Response
 from werkzeug.routing import Map, Rule
 from werkzeug.exceptions import HTTPException
 
+from config import Configuration
 import views
 
 class Wurstgulasch:
     def __init__(self):
+        # read config from wurstgulash.cfg
+        Configuration().loadFromFile("wurstgulasch.cfg")
+        
+        # set routing for app
         self.url_map = Map(
             [
                 Rule('/', endpoint='default'),

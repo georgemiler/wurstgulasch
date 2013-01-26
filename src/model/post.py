@@ -1,4 +1,5 @@
 import database
+from config import Configuration
 
 class post:
     def __init__(self, post_id, timestamp, origin, content_type, content_string, source=None, description=None, reference=None, signature=None, tags=[]):
@@ -17,7 +18,7 @@ class post:
         return "<Post:"+str(self.post_id)+">"
 
 def get_posts_pagewise(page, posts_per_page=30):
-    db = database.database_connection(filename="lol.db")
+    db = database.database_connection(filename=Configuration().database_filename)
     cursor = db.connection.cursor()
     cursor.execute("SELECT * from sftib_posts ORDER BY timestamp LIMIT ?,?", ((page-1)*posts_per_page, posts_per_page))
     rows = cursor.fetchall()
@@ -41,7 +42,7 @@ def get_posts_pagewise(page, posts_per_page=30):
     return posts
 
 def get_posts(since=None, count=None):
-    db = database.database_connection(filename="lol.db")
+    db = database.database_connection(filename=Configuration().database_filename)
     cursor = db.connection.cursor()
     if since == None and count == None:
         cursor.execute("SELECT * FROM sftib_posts ORDER BY timestamp;")  # TODO include tags
@@ -72,7 +73,7 @@ def get_posts(since=None, count=None):
     return posts
 
 def insert_post(post):
-    db = database.database_connection(filename="lol.db")
+    db = database.database_connection(filename=Configuration().database_filename)
     cursor = db.connection.cursor()
     
     cursor.execute("INSERT INTO sftib_posts (post_id, timestamp, origin, content_type, content_string, source, description, reference, signature) VALUES (?,?,?,?,?,?,?,?,?)", (post.post_id, post.timestamp, post.origin, post.content_type, post.content_string, post.source, post.description, post.reference, post.signature))
