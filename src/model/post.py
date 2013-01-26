@@ -16,6 +16,30 @@ class post:
     def __str__(self):
         return "<Post:"+str(self.post_id)+">"
 
+def get_posts_pagewise(page, posts_per_page=30):
+    db = database.database_connection(filename="lol.db")
+    cursor = db.connection.cursor()
+    cursor.execute("SELECT * from sftib_posts ORDER BY timestamp LIMIT ?,?", ((page-1)*posts_per_page, posts_per_page))
+    rows = cursor.fetchall()
+
+    posts = []
+    for row in rows:
+        tmp = post(
+            post_id = row['post_id'],
+            timestamp = row['timestamp'],
+            origin = row['origin'],
+            content_type = row['content_type'],
+            content_string = row['content_string'],
+            source = row['source'],
+            tags = [], # TODO include tags
+            description = row['description'],
+            reference = row['reference'],
+            signature = row['signature']
+        )
+        posts.append(tmp)
+
+    return posts
+
 def get_posts(since=None, count=None):
     db = database.database_connection(filename="lol.db")
     cursor = db.connection.cursor()

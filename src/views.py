@@ -31,6 +31,11 @@ def json_last(request, count):
     out = render_template(template_name="json.tpl", posts=posts)
     return Response(out, mimetype="text/plain")
 
+def web_view_posts(request, page=1, posts_per_page=30):
+    posts = post.get_posts_pagewise(page=page, posts_per_page=posts_per_page)
+    out = render_template(template_name="web_view_posts.tpl", posts=posts)
+    return Response(out, mimetype="text/html")        
+
 def web_insert_post(request):
     if request.method == "POST":
         tmp = post.post(

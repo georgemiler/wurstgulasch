@@ -9,6 +9,8 @@ class Wurstgulasch:
         self.url_map = Map(
             [
                 Rule('/', endpoint='default'),
+                Rule('/human/view/<page>', endpoint='web_view_posts'),
+                Rule('/human/view', endpoint='web_view_posts'),
                 Rule('/human/add', endpoint='web_insert_post'),
                 Rule('/machine/since/<timestamp>', endpoint='json_since'),
                 Rule('/machine/last/<count>', endpoint='json_last')
@@ -34,4 +36,4 @@ class Wurstgulasch:
 
 if __name__ == "__main__":
     from werkzeug.serving import run_simple
-    run_simple('localhost', 5000, Wurstgulasch(), use_debugger=True) 
+    run_simple('localhost', 5000, Wurstgulasch(), use_debugger=True, use_reloader=True) 
