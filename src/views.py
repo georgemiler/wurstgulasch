@@ -1,25 +1,17 @@
 #!/usr/bin/python2
-
+from werkzeug.wrappers import Response
 import pyratemp
-import database
+from model import post
 
-import cgitb
-cgitb.enable()
+def json_since(request, timestamp):
+    posts = post.get_posts()
+    tpl = pyratemp.Template(filename="templates/json.tpl")
+    return Response(tpl(posts=posts))
 
-db = database.database_connection(filename="lol.db")
+def json_last(request, count):
+    posts = post.get_posts(count=count)
+    tpl = pyratemp.Template(filename="templates/json.tpl")
+    return Response(tpl(posts=posts))
 
-def print_header(content_type="text/html"):
-    print("Content-Type: %s" % (content_type,))
-    print("Content-Encoding: utf-8")
-    print("")
-
-def view_user_posts_json():
-    print_header(content_type="text/json")
-    posts = db.get_posts()
-    temp = pyratemp.Template(filename="templates/json.tpl")
-    print(temp(post=posts[0]))
-
-def view_user_posts():
-    pass
-
-view_user_posts_json()
+def default(request):
+    return Response('lol')

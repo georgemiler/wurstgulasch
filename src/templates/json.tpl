@@ -1,4 +1,6 @@
 [
+    
+<!--( for post in posts )-->
     {
         "post_id": "@!post.post_id!@",
         "timestamp: @!post.timestamp!@,
@@ -9,5 +11,8 @@
         "tags": @!post.tags!@,
         "reference": "@!post.reference!@",
         "signature": "@!post.signature!@"
-    }
+    },
+
+<!--( end ) -->
+
 ]
