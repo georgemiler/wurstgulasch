@@ -17,32 +17,29 @@ class post:
     def __str__(self):
         return "<Post:"+str(self.post_id)+">"
 
+def sql_post_factory(cursor, row):
+    
+    p = post(None, None, None, None, None, None)
+
+    for index, column in enumerate(cursor.description):
+        if column[0] != 'id':  # We don't need the internal database ID!
+            p.__dict__[column[0]] = row[index]
+    
+    return p
+    
+
 def get_posts_pagewise(page, posts_per_page=30):
     db = database.database_connection(filename=Configuration().database_filename)
+    db.connection.row_factory = sql_post_factory
     cursor = db.connection.cursor()
     cursor.execute("SELECT * from sftib_posts ORDER BY timestamp LIMIT ?,?", ((page-1)*posts_per_page, posts_per_page))
-    rows = cursor.fetchall()
-
-    posts = []
-    for row in rows:
-        tmp = post(
-            post_id = row['post_id'],
-            timestamp = row['timestamp'],
-            origin = row['origin'],
-            content_type = row['content_type'],
-            content_string = row['content_string'],
-            source = row['source'],
-            tags = [], # TODO include tags
-            description = row['description'],
-            reference = row['reference'],
-            signature = row['signature']
-        )
-        posts.append(tmp)
-
+    posts = cursor.fetchall()
     return posts
 
 def get_posts(since=None, count=None):
     db = database.database_connection(filename=Configuration().database_filename)
+    db.connection.row_factory = sql_post_factory
+
     cursor = db.connection.cursor()
     if since == None and count == None:
         cursor.execute("SELECT * FROM sftib_posts ORDER BY timestamp;")  # TODO include tags
@@ -52,23 +49,7 @@ def get_posts(since=None, count=None):
         cursor.execute("SELECT * FROM sftib_posts ORDER BY timestamp LIMIT ?", (count,))
     else:
         cursor.execute("SELECT * FROM sftib_posts ORDER BY timestamp LIMIT 30")
-    rows = cursor.fetchall()
-
-    posts = []
-    for row in rows:
-        tmp = post(
-            post_id = row['post_id'],
-            timestamp = row['timestamp'],
-            origin = row['origin'],
-            content_type = row['content_type'],
-            content_string = row['content_string'],
-            source = row['source'],
-            tags = [], # TODO include tags
-            description = row['description'],
-            reference = row['reference'],
-            signature = row['signature']
-        )
-        posts.append(tmp)
+    posts = cursor.fetchall()
 
     return posts
 
