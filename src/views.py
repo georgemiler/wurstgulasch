@@ -23,9 +23,9 @@ def render_template(template_name, **context):
     #jinja_env.update_template_context(context)
     return jinja_env.get_template(template_name).render(context)
 
-def generate_thumbnail(filename):
+def generate_thumbnail(folder, filename):
     from PIL import Image
-    im = Image.open(os.path.join('assets', filename))
+    im = Image.open(os.path.join(folder, filename))
                     
     # guttenberg'd from:
     #   http://jargonsummary.wordpress.com/2011/01/08/how-to-resize-images-with-python/
@@ -34,8 +34,9 @@ def generate_thumbnail(filename):
     wpercent = (basewidth / float(im.size[0]))
     hsize = int((float(im.size[1]) * float(wpercent)))
     im = im.resize((basewidth, hsize), Image.ANTIALIAS)
-    im.save(os.path.join('assets', 'thumb_'+filename))
-    
+    thumbpath = os.path.join(folder, "thumb_"+filename)
+    im.save(thumbpath)
+    return thumbpath
 
 def json_since(request, timestamp):
     posts = post.get_posts(since=timestamp)
@@ -52,71 +53,69 @@ def web_view_posts(request, page=1, posts_per_page=30):
     out = render_template(template_name="web_view_posts.tpl", posts=posts)
     return Response(out, mimetype="text/html")        
 
-# TODO: Refactor
 def web_insert_post(request):
     if request.method == "POST":
-        url = Configuration().base_url+"assets/"
-        if request.form['content_string'] == "":
-            # either we have a file upload or the request is incomplete!
+        # find out content type
+        try:
+            content_type = request.form['content_type']
+        except Exception,e:
+            raise Exception("No Content Type was passed!")
+
+        # different content types = different methods
+        if content_type == "image":
+            # figure out if source is URL or uploaded file and acquire content + mimetype
             uploaded = request.files.get('file')
             if uploaded:
+                image = uploaded.read()
                 mimetype = uploaded.content_type
-                if mimetype.split('/')[0] == "image" and mimetype.split('/')[1] in ['jpeg', 'png', 'gif', 'tiff']:
-                    hash = md5(uploaded.read())
-                    uploaded.seek(0)
-                    filename = str(hash.hexdigest()) + "." + mimetype.split('/')[1]
-                    uploaded.save(os.path.join('assets', filename))
-                    generate_thumbnail(filename)
-                    url += filename
-                    # TODO implement size check
-                else:
-                    raise Exception("Invalid File uploaded!")
+            elif request.form['content_string'] != None:
+                # TODO verify URL
+                from urllib import urlopen
+                f = urlopen(request.form['content_string'])
+                image = f.read()
+                mimetype = f.info().gettype()
             else:
-                raise Exception("Incomplete request!")
-        else:
-            if request.form['content_type'] == "image":
-                # get Image from URL
-                from urllib2 import urlopen
-                try:
-                    image = urlopen(request.form['content_string'])
-                    if image.info().getmaintype() != "image":
-                        raise Exception("URL was not an image!")
-                    if image.info().getsubtype() not in ['jpeg', 'png', 'gif', 'tiff']:
-                        raise Exception("Image type not accepted! ("+image.info().getsubtype()+")")
-                    
-                    raw = image.read()
-                    hash = md5(raw)
-                    filename = str(hash.hexdigest())+"."+image.info().getsubtype()
-                    f = open(os.path.join('assets', filename), 'w')
-                    f.write(raw)
-                    f.close()                   
-
-                    generate_thumbnail(filename)
-                    url += filename
-                except Exception,e:
-                    raise Exception("Fehler beim Spiegeln der URL! "+str(e))
-                
+                raise Exception("No Data given")
             
-        if request.form['content_type'] == "image":
-            content_string = url
-        else:
-            content_string = request.form['content_string']
-
-        tmp = post.post(
-            post_id=random.randint(1,2**32),
-            timestamp=int(time.time()),
-            origin="http://dev.img.sft.mx/",
-            content_type=request.form['content_type'],
-            content_string=content_string,
-            source=request.form['source'],
-            tags=None,
-            description=request.form['description'],
-            reference=None,
-            signature=None
-        )
+            # continue file processing
+            main_type = mimetype.split('/')[0]
+            sub_type = mimetype.split('/')[1]
+            
+            if main_type != "image" or sub_type not in ['jpeg', 'png', 'gif', 'tiff']:
+                raise Exception("Unsupported File Type")
+            
+            filename = md5(image).hexdigest() + "." + sub_type
+            path = os.path.join('assets', filename)
+            
+            f = open(path, 'w')
+            f.write(image)
+            f.close()
+    
+            thumbpath = generate_thumbnail('assets', filename) 
+            content_string = Configuration().base_url+path           
  
-        post.insert_post(tmp) 
-        return Response('This was a triumph', mimetype="text/plain") 
+            tmp = post.post(
+                post_id=random.randint(1,2**32),
+                timestamp=int(time.time()),
+                origin="http://dev.img.sft.mx/",
+                content_type=content_type,
+                content_string=content_string,
+                source=request.form['source'],
+                tags=None,
+                description=request.form['description'],
+                reference=None,
+                signature=None
+            )
+         
+            post.insert_post(tmp) 
+            return Response('This was a triumph', mimetype="text/plain") 
+  
+        elif content_type == "video":
+            pass
+        
+        else:
+            raise Exception("Unknown Content type!")
+             
     else:
         out = render_template('web_insert_post.html')
         return Response(out, mimetype="text/html")
