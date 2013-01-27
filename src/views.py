@@ -50,9 +50,22 @@ def web_insert_post(request):
                     from hashlib import md5
                     hash = md5(uploaded.read())
                     uploaded.seek(0)
-                    uploaded.save(os.path.join('assets', str(hash.hexdigest())+"."+mimetype.split('/')[1]))
+                    filename = str(hash.hexdigest()) + "." + mimetype.split('/')[1]
+                    uploaded.save(os.path.join('assets', filename))
+                    uploaded.seek(0)
+                    from PIL import Image
+                    im = Image.open(os.path.join('assets', filename))
+                    
+                    # guttenberg'd from:
+                    #   http://jargonsummary.wordpress.com/2011/01/08/how-to-resize-images-with-python/
+                    # TODO: Improve algorithm
+                    basewidth = 300
+                    wpercent = (basewidth / float(im.size[0]))
+                    hsize = int((float(im.size[1]) * float(wpercent)))
+                    im = im.resize((basewidth, hsize), Image.ANTIALIAS)
+                    im.save(os.path.join('assets', 'thumb_'+filename))
+                    
                     # TODO implement size check
-                    # TODO implement thumbnails
                 else:
                     raise Exception("Invalid File uploaded!")
             else:

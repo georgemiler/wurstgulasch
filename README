@@ -1,5 +1,8 @@
-Welcome to the SFT Imageboard
+Welcome to wurstgulasch README!
 
-blablabla etc.
-
-for now specs are in https://pad.foebud.org/TwRRQ9KLds
+- specs are in https://pad.foebud.org/TwRRQ9KLds
+- wurstgulasch depends on:
+    * werkzeug
+    * jinja2
+    * PIL
+- gl&hf
