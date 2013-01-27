@@ -1,6 +1,9 @@
 from werkzeug.wrappers import Request, Response
 from werkzeug.routing import Map, Rule
 from werkzeug.exceptions import HTTPException
+from werkzeug.wsgi import SharedDataMiddleware
+
+import os
 
 from config import Configuration
 import views
@@ -39,6 +42,15 @@ class Wurstgulasch:
     def __call__(self, environment, start_response):
         return self.handle_request(environment, start_response)
 
+def create_app():
+    app = Wurstgulasch()
+    app.__call__ = SharedDataMiddleware(
+        app.__call__, { 
+            '/assets': './assets'
+        }
+    )
+    return app
+
 if __name__ == "__main__":
     from werkzeug.serving import run_simple
-    run_simple('localhost', 5000, Wurstgulasch(), use_debugger=True, use_reloader=True) 
+    run_simple('localhost', 5000, create_app(), use_debugger=True, use_reloader=True) 
