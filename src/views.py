@@ -38,6 +38,26 @@ def web_view_posts(request, page=1, posts_per_page=30):
 
 def web_insert_post(request):
     if request.method == "POST":
+        
+        # TODO: Verify contents
+    
+        if request.form['content_string'] == None or request.form['content_string'] == "":
+            # either we have a file upload or the request is incomplete!
+            uploaded = request.files.get('file')
+            if uploaded:
+                mimetype = uploaded.content_type
+                if mimetype.split('/')[0] == "image" and mimetype.split('/')[1] in ['jpeg', 'png', 'gif', 'tiff']:
+                    from hashlib import md5
+                    hash = md5(uploaded.read())
+                    uploaded.seek(0)
+                    uploaded.save(os.path.join('assets', str(hash.hexdigest())+"."+mimetype.split('/')[1]))
+                    # TODO implement size check
+                    # TODO implement thumbnails
+                else:
+                    raise Exception("Invalid File uploaded!")
+            else:
+                raise Exception("Incomplete request!")
+
         tmp = post.post(
             post_id=random.randint(1,2**32),
             timestamp=int(time.time()),

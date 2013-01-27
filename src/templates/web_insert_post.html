@@ -3,11 +3,12 @@
 </head>
 <body>
 <h1>Insert Post</h1>
-<form method="POST" action="">
+<form method="POST" action="" enctype="multipart/form-data">
     Content-Type: <select name="content_type">
         <option value="image">Image</option>
     </select><br>
     Content-String: <input type="text" name="content_string"><br>
+    OR File: <input type="file" name="file"><br>
     Source: <input type="text" name="source"><br>
     Description: <input type="text" name="description"><br>
     <input type="submit">
