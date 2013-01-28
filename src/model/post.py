@@ -121,7 +121,17 @@ def get_posts(since=None, count=None):
 
 def insert_post(post):
     db = database.database_connection(filename=Configuration().database_filename)
+
+    # post
+    cursor = db.connection.cursor()
+    cursor.execute("INSERT INTO sftib_posts (post_id, timestamp, origin, content_type, content_string, source, description, reference, signature) VALUES (?,?,?,?,?,?,?,?,?)", (post.post_id, post.timestamp, post.origin, post.content_type, post.content_string, post.source, post.description, post.reference, post.signature))
+    post_id = cursor.lastrowid
+    
+    # tag post 
     cursor = db.connection.cursor()
     
-    cursor.execute("INSERT INTO sftib_posts (post_id, timestamp, origin, content_type, content_string, source, description, reference, signature) VALUES (?,?,?,?,?,?,?,?,?)", (post.post_id, post.timestamp, post.origin, post.content_type, post.content_string, post.source, post.description, post.reference, post.signature))
+    for tag in post.tags:
+        cursor.execute("INSERT INTO sftib_tags ( tag ) VALUES ( ? );", (tag,))
+        cursor.execute("INSERT INTO sftib_post_is_tagged ( post_id, tag_id ) VALUES (?, (SELECT id FROM sftib_tags WHERE tag=? LIMIT 1));", (post_id, tag))
     db.connection.commit()
+

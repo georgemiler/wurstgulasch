@@ -95,30 +95,19 @@ def web_insert_post(request):
             image_url = Configuration().base_url+image_path           
             thumb_url = Configuration().base_url+thumb_path
 
+            # parse tags
+            tags = [ t.strip() for t in request.form['tags'].split(',') ]
+            
             tmp = post.image_post.create_new(
                 image_url=image_url,
                 thumb_url=thumb_url,
                 source=request.form['source'],
-                tags=None,
+                tags=tags,
                 description=request.form['description'],
                 reference=None,
                 signature=None
             ) 
-
-            #tmp = post.post(
-                #post_id=random.randint(1,2**32),
-                #timestamp=int(time.time()),
-                #origin="http://dev.img.sft.mx/",
-                #content_type=content_type,
-                #content_string=content_string,
-                
-                #source=request.form['source'],
-                #tags=None,
-                #description=request.form['description'],
-                #reference=None,
-                #signature=None
-            #)
-         
+            
             post.insert_post(tmp) 
             return Response('This was a triumph', mimetype="text/plain") 
   
