@@ -1,4 +1,3 @@
-import database
 from config import Configuration
 
 import random
