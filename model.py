@@ -13,7 +13,13 @@ try:
 except NameError, e:
     pass
 
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, Table, Text, ForeignKey
+from sqlalchemy.orm import relationship
+
+post_tag = Table('post_tag', Base.metadata,
+    Column('post_id', Integer, ForeignKey('post.id')),
+    Column('tag_id', Integer, ForeignKey('tag.id'))
+)
 
 class post(Base):
     __tablename__ = 'post'
@@ -25,6 +31,7 @@ class post(Base):
     content_string = Column(String)
     source = Column(String)
     # TODO Tags as many to many relation
+    tags = relationship('tag', secondary=post_tag, backref='post')
     description = Column(String)
     # TODO reference as foreign key
     # signature = Column(String)
@@ -76,3 +83,12 @@ class image_post(post):
         self.image_url = self.content_string.split(';')[0]
         self.thumb_url = self.content_string.split(';')[1]
         return self
+
+class tag(Base):
+    __tablename__ = "tag"
+
+    id = Column(Integer, primary_key=True)
+    tag = Column(String)
+    
+    def __init__(self, tag):
+        self.tag = tag

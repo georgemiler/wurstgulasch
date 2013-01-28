@@ -10,7 +10,7 @@ from jinja2 import Environment, FileSystemLoader
 from sqlalchemy import desc
 
 import model
-from model import post, image_post
+from model import tag, post, image_post
 from config import Configuration
 
 def render_template(template_name, **context):
@@ -100,22 +100,33 @@ def web_insert_post(request):
             image_url = Configuration().base_url+image_path           
             thumb_url = Configuration().base_url+thumb_path
 
-            # parse tags
-            tags = [ t.strip() for t in request.form['tags'].split(',') ]
-            
+                   
             tmp = image_post(
                 image_url=image_url,
                 thumb_url=thumb_url,
                 source=request.form['source'],
-                tags=tags,
+                tags=[],
                 description=request.form['description'],
                 reference=None,
                 signature=None
             ) 
             
             session = model.Session()
+
+            # add tags
+            tag_strings = [ t.strip() for t in request.form['tags'].split(',') ]
+            for tag_str in tag_strings:
+                res = session.query(tag).filter(tag.tag == tag_str).all()
+                if res:
+                    tmp.tags.append(res[0])
+                else:
+                    new_tag = tag(tag_str)
+                    session.add(new_tag)
+                    tmp.tags.append(new_tag)
+            
             session.add(tmp)
             session.commit()
+            
             return Response('This was a triumph', mimetype="text/plain") 
   
         elif content_type == "video":
