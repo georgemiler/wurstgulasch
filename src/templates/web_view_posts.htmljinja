@@ -1,0 +1,15 @@
+<html>
+<head>
+</head>
+<body>
+<ul>
+{% for post in posts %}
+<li> {{post.post_id}}: <br>
+{% if post.content_type == "image" %}
+<a href="{{post.image_url}}"><img src="{{post.thumb_url}}"></a><br>
+{% endif %}
+{{ post.description }} </li>
+{%endfor%}
+</ul>
+</body>
+</html>

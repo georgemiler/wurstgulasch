@@ -40,7 +40,7 @@ def generate_thumbnail(folder, filename):
 
 def json_since(request, timestamp):
     posts = post.get_posts(since=timestamp)
-    out = render_template(template_name="json.tpl", posts=posts)
+    out = render_template(template_name="json.jinja", posts=posts)
     return Response(out, mimetype="text/plain")
 
 def json_last(request, count):
@@ -50,7 +50,7 @@ def json_last(request, count):
 
 def web_view_posts(request, page=1, posts_per_page=30):
     posts = post.get_posts_pagewise(page=int(page), posts_per_page=posts_per_page)
-    out = render_template(template_name="web_view_posts.tpl", posts=posts)
+    out = render_template(template_name="web_view_posts.htmljinja", posts=posts)
     return Response(out, mimetype="text/html")        
 
 def web_insert_post(request):
@@ -85,27 +85,39 @@ def web_insert_post(request):
                 raise Exception("Unsupported File Type")
             
             filename = md5(image).hexdigest() + "." + sub_type
-            path = os.path.join('assets', filename)
+            image_path = os.path.join('assets', filename)
             
-            f = open(path, 'w')
+            f = open(image_path, 'w')
             f.write(image)
             f.close()
     
-            thumbpath = generate_thumbnail('assets', filename) 
-            content_string = Configuration().base_url+path           
- 
-            tmp = post.post(
-                post_id=random.randint(1,2**32),
-                timestamp=int(time.time()),
-                origin="http://dev.img.sft.mx/",
-                content_type=content_type,
-                content_string=content_string,
+            thumb_path = generate_thumbnail('assets', filename) 
+            image_url = Configuration().base_url+image_path           
+            thumb_url = Configuration().base_url+thumb_path
+
+            tmp = post.image_post.create_new(
+                image_url=image_url,
+                thumb_url=thumb_url,
                 source=request.form['source'],
                 tags=None,
                 description=request.form['description'],
                 reference=None,
                 signature=None
-            )
+            ) 
+
+            #tmp = post.post(
+                #post_id=random.randint(1,2**32),
+                #timestamp=int(time.time()),
+                #origin="http://dev.img.sft.mx/",
+                #content_type=content_type,
+                #content_string=content_string,
+                
+                #source=request.form['source'],
+                #tags=None,
+                #description=request.form['description'],
+                #reference=None,
+                #signature=None
+            #)
          
             post.insert_post(tmp) 
             return Response('This was a triumph', mimetype="text/plain") 

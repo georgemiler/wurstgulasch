@@ -1,6 +1,9 @@
 import database
 from config import Configuration
 
+import random
+import time
+
 class post:
     def __init__(self, post_id, timestamp, origin, content_type, content_string, source=None, description=None, reference=None, signature=None, tags=[]):
         self.post_id = post_id
@@ -16,14 +19,77 @@ class post:
 
     def __str__(self):
         return "<Post:"+str(self.post_id)+">"
+    
+    @staticmethod
+    def create_new(content_type, content_string, source=None, description=None, reference=None, signature=None, tags=[]):
+        """
+        Creates a brand new post Object and returns it
+        """
+        return post(
+            post_id=random.randint(1,2**32),
+            timestamp=int(time.time()),
+            origin=Configuration().base_url,
+            content_type=content_type,
+            content_string=content_string,
+            source=source,
+            description=description,
+            reference=reference,
+            tags=tags
+        )
+
+class image_post(post):
+    def __init__(self, post_id, timestamp, origin, image_url, thumb_url,  source=None, description=None, reference=None, signature=None, tags=[]):
+        post.__init__(self,
+            post_id=post_id,
+            timestamp=timestamp,
+            origin=origin,
+            content_type="image",
+            content_string=image_url+";"+thumb_url,
+            source=source,
+            description=description,
+            reference=reference,
+            signature=signature,
+            tags=tags
+        )
+        self.image_url = image_url
+        self.thumb_url = thumb_url
+
+    @staticmethod
+    def create_new(image_url, thumb_url ,source=None, description=None, reference=None, signature=None, tags=[]):
+        return image_post(
+            post_id=random.randint(1,2**32),
+            timestamp=int(time.time()),
+            origin=Configuration().base_url,
+            image_url=image_url,
+            thumb_url=thumb_url,
+            source=source,
+            description=description,
+            reference=reference,
+            signature=signature,
+            tags=tags
+        )
 
 def sql_post_factory(cursor, row):
-    
-    p = post(None, None, None, None, None, None)
-
+    d = {}
     for index, column in enumerate(cursor.description):
-        if column[0] != 'id':  # We don't need the internal database ID!
-            p.__dict__[column[0]] = row[index]
+        d[column[0]] = row[index]
+
+    if d['content_type'] == "image":
+        p = image_post(
+            post_id=d['post_id'],
+            timestamp=d['timestamp'],
+            origin=d['origin'],
+            image_url=d['content_string'].split(';')[0],
+            thumb_url=d['content_string'].split(';')[1],
+            source=d['source'],
+            description=d['description'],
+            reference=d['reference'],
+            signature=d['signature'],
+            tags=None  #TODO change when tags are supported
+        )
+    else:
+        p = post(None, None, None, None, None)
+        p.__dict__ = d #TODO hacketyhack
     
     return p
     
