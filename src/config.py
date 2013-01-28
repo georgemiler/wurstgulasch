@@ -6,7 +6,7 @@ class Configuration:
     def __init__(self):
         self.__dict__ = self.__shared_state
     
-    def loadFromFile(self,filename="wurstgulasch.cfg"):
+    def load_from_file(self,filename="wurstgulasch.cfg"):
         parser = ConfigParser.RawConfigParser()
         parser.read(filename)
 
@@ -14,5 +14,4 @@ class Configuration:
         self.instance_owner = parser.get("base", "instance_owner")
         self.base_url = parser.get("base", "base_url")
  
-        self.database_system = parser.get("db", "database_system")
-        self.database_filename = parser.get("db", "database_filename")
+        self.database_uri = parser.get("db", "database_uri")

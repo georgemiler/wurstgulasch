@@ -1,4 +1,4 @@
-[
+[{% if posts %}
     {% for post in posts[:-1] %}
     {
         "post_id": "{{ post.post_id }}" ,
@@ -23,4 +23,4 @@
         "reference": "{{ posts[-1].reference }}",
         "signature": "{{ posts[-1].signature }}"
     }
-]
+{% endif %}]

@@ -7,7 +7,10 @@ from werkzeug.wrappers import Response
 
 from jinja2 import Environment, FileSystemLoader
 
-from model import post
+from sqlalchemy import desc
+
+import model
+from model import post, image_post
 from config import Configuration
 
 def render_template(template_name, **context):
@@ -39,17 +42,19 @@ def generate_thumbnail(folder, filename):
     return thumbpath
 
 def json_since(request, timestamp):
-    posts = post.get_posts(since=timestamp)
+    posts = model.Session().query(post).filter(post.timestamp >= int(timestamp)).all() 
     out = render_template(template_name="json.jinja", posts=posts)
     return Response(out, mimetype="text/plain")
 
 def json_last(request, count):
-    posts = post.get_posts(count=count)
-    out = render_template(template_name="json.tpl", posts=posts)
+    posts = model.Session().query(post).order_by(desc(post.timestamp)).limit(int(count)).all() 
+    out = render_template(template_name="json.jinja", posts=posts)
     return Response(out, mimetype="text/plain")
 
 def web_view_posts(request, page=1, posts_per_page=30):
-    posts = post.get_posts_pagewise(page=int(page), posts_per_page=posts_per_page)
+    query = model.Session().query(post).offset((int(page)-1)*posts_per_page).limit(posts_per_page)
+    posts = [p.downcast() for p in query.all()]
+    
     out = render_template(template_name="web_view_posts.htmljinja", posts=posts)
     return Response(out, mimetype="text/html")        
 
@@ -98,7 +103,7 @@ def web_insert_post(request):
             # parse tags
             tags = [ t.strip() for t in request.form['tags'].split(',') ]
             
-            tmp = post.image_post.create_new(
+            tmp = image_post(
                 image_url=image_url,
                 thumb_url=thumb_url,
                 source=request.form['source'],
@@ -108,7 +113,9 @@ def web_insert_post(request):
                 signature=None
             ) 
             
-            post.insert_post(tmp) 
+            session = model.Session()
+            session.add(tmp)
+            session.commit()
             return Response('This was a triumph', mimetype="text/plain") 
   
         elif content_type == "video":
