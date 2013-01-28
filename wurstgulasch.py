@@ -47,7 +47,7 @@ class Wurstgulasch:
 
     def init_database(self):
         import model
-        model.post.Base.metadata.create_all(bind=self.db)
+        model.Base.metadata.create_all(bind=self.db)
 
     def __call__(self, environment, start_response):
         return self.handle_request(environment, start_response)
