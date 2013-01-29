@@ -58,6 +58,19 @@ def web_view_posts(request, page=1, posts_per_page=30):
     out = render_template(template_name="web_view_posts.htmljinja", posts=posts)
     return Response(out, mimetype="text/html")        
 
+def web_view_posts_tag(request, tagstr):
+    #identify tag
+    session = model.Session()
+    res = session.query(tag).filter(tag.tag == tagstr).all()
+    if res:
+        tag_found = res[0]
+        posts = tag_found.posts
+    else:
+        raise Exception("Tag not found!")
+
+    out = render_template(template_name="web_view_posts.htmljinja", posts=posts)
+    return Response(out, mimetype="text/html")        
+
 def web_insert_post(request):
     if request.method == "POST":
         # find out content type

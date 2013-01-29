@@ -26,8 +26,8 @@ class Wurstgulasch:
         self.url_map = Map(
             [
                 Rule('/', endpoint='default'),
-                Rule('/human/view/<page>', endpoint='web_view_posts'),
-                Rule('/human/view', endpoint='web_view_posts'),
+                Rule('/human/view/page/<page>', endpoint='web_view_posts'),
+                Rule('/human/view/tags/<tagstr>', endpoint='web_view_posts_tag'),
                 Rule('/human/add', endpoint='web_insert_post'),
                 Rule('/machine/since/<timestamp>', endpoint='json_since'),
                 Rule('/machine/last/<count>', endpoint='json_last')

@@ -89,6 +89,13 @@ class tag(Base):
 
     id = Column(Integer, primary_key=True)
     tag = Column(String)
-    
+    posts = relationship('post', secondary=post_tag, backref='tag')
+   
     def __init__(self, tag):
         self.tag = tag
+
+    def __str__(self):
+        return "< Tag \""+self.tag+"\">"
+    
+    def __repr__(self):
+        return self.__str__()
