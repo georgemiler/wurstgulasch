@@ -5,7 +5,7 @@
 <ul>
 {% for friend in friends %}
 <li>
-<a href="{{friend.url}}">{{friend.screenname}}</a>
+<a href="{{friend.url}}">{{friend.screenname}}</a> lastupdated:{{friend.lastupdated}}
 </li>
 {%endfor%}
 </ul>

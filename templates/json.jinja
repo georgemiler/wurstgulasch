@@ -7,7 +7,7 @@
         "content_type": "{{ post.content_type }}" ,
         "content_string": "{{ post.content_string }}",
         "source": "{{ post.source }}",
-        "tags": [],
+        "tags": [{% for t in post.tags %}"{{t.tag}}"{% endfor %} ],
         "reference": "{{ post.reference }}",
         "signature": "{{ post.signature }}"
     },
@@ -19,7 +19,7 @@
         "content_type": "{{ posts[-1].content_type }}" ,
         "content_string": "{{ posts[-1].content_string }}",
         "source": "{{ posts[-1].source }}",
-        "tags": [],
+        "tags": [{% for t in posts[-1].tags %}"{{t.tag}}"{% endfor %} ],
         "reference": "{{ posts[-1].reference }}",
         "signature": "{{ posts[-1].signature }}"
     }
