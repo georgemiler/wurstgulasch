@@ -28,7 +28,9 @@ class Wurstgulasch:
                 Rule('/', endpoint='default'),
                 Rule('/human/view/page/<page>', endpoint='web_view_posts'),
                 Rule('/human/view/tags/<tagstr>', endpoint='web_view_posts_tag'),
-                Rule('/human/add', endpoint='web_insert_post'),
+                Rule('/human/posts/add', endpoint='web_insert_post'),
+                Rule('/human/friends/view', endpoint='web_view_friends'),
+                Rule('/human/friends/add', endpoint='web_add_friends'),
                 Rule('/machine/since/<timestamp>', endpoint='json_since'),
                 Rule('/machine/last/<count>', endpoint='json_last')
             ]

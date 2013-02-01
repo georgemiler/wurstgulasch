@@ -10,7 +10,7 @@ from jinja2 import Environment, FileSystemLoader
 from sqlalchemy import desc
 
 import model
-from model import tag, post, image_post
+from model import tag, post, image_post, friend 
 from config import Configuration
 
 def render_template(template_name, **context):
@@ -150,6 +150,24 @@ def web_insert_post(request):
              
     else:
         out = render_template('web_insert_post.html')
+        return Response(out, mimetype="text/html")
+
+def web_view_friends(request):
+    session = model.Session()
+    friends = session.query(model.friend).all()
+    out = render_template('web_view_friends.htmljinja', friends=friends)
+    return Response(out, mimetype="text/html")
+
+def web_add_friends(request):
+    if request.method == "POST":
+        if request.form['url'] != "" and request.form['screenname'] != "":
+            tmp = friend(screenname=request.form['screenname'], url=request.form['url'])
+            session = model.Session()
+            session.add(tmp)
+            session.commit()
+            return Response('Friend instance added successfully!')            
+    else:
+        out = render_template('web_add_friend.html')
         return Response(out, mimetype="text/html")
 
 def default(request):

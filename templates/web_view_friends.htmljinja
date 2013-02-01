@@ -1,0 +1,13 @@
+<html>
+<head>
+</head>
+<body>
+<ul>
+{% for friend in friends %}
+<li>
+<a href="{{friend.url}}">{{friend.screenname}}</a>
+</li>
+{%endfor%}
+</ul>
+</body>
+</html>

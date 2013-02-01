@@ -16,6 +16,16 @@ except NameError, e:
 from sqlalchemy import Column, Integer, String, Table, Text, ForeignKey
 from sqlalchemy.orm import relationship
 
+class friend(Base):
+    __tablename__ = 'friends'
+    id = Column(Integer, primary_key=True)
+    screenname = Column(String)
+    url = Column(String)
+
+    def __init__(self, screenname, url):
+        self.screenname = screenname
+        self.url = url    
+
 post_tag = Table('post_tag', Base.metadata,
     Column('post_id', Integer, ForeignKey('post.id')),
     Column('tag_id', Integer, ForeignKey('tag.id'))
