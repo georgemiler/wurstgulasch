@@ -2,6 +2,7 @@ import os
 import random
 import time
 from hashlib import md5
+import json
 
 from werkzeug.wrappers import Response
 
@@ -43,13 +44,13 @@ def generate_thumbnail(folder, filename):
 
 def json_since(request, timestamp):
     posts = model.Session().query(post).filter(post.timestamp >= int(timestamp)).all() 
-    out = render_template(template_name="json.jinja", posts=posts)
-    return Response(out, mimetype="text/plain")
+    dicts = [ x.to_serializable_dict() for x in posts ]
+    return Response(json.dumps(dicts, encoding="utf-8"), mimetype="text/plain")
 
 def json_last(request, count):
     posts = model.Session().query(post).order_by(desc(post.timestamp)).limit(int(count)).all() 
-    out = render_template(template_name="json.jinja", posts=posts)
-    return Response(out, mimetype="text/plain")
+    dicts = [ x.to_serializable_dict() for x in posts ]
+    return Response(json.dumps(dicts, encoding="utf-8"), mimetype="text/plain")
 
 def web_view_posts(request, page=1, posts_per_page=30):
     query = model.Session().query(post).offset((int(page)-1)*posts_per_page).limit(posts_per_page)
@@ -161,7 +162,7 @@ def web_view_friends(request):
 def web_add_friends(request):
     if request.method == "POST":
         if request.form['url'] != "" and request.form['screenname'] != "":
-            tmp = friend(screenname=request.form['screenname'], url=request.form['url'])
+            tmp = friend(screenname=request.form['screenname'], url=request.form['url'], lastupdated=0)
             session = model.Session()
             session.add(tmp)
             session.commit()

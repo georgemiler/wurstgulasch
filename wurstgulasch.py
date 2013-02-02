@@ -8,6 +8,8 @@ from werkzeug.wsgi import SharedDataMiddleware
 from sqlalchemy import create_engine
 
 import os
+import time
+import json
 
 from config import Configuration
 import views
@@ -35,6 +37,41 @@ class Wurstgulasch:
                 Rule('/machine/last/<count>', endpoint='json_last')
             ]
         )
+
+    def query_friends(self):
+        from urllib import urlopen
+        friends = model.Session().query(model.friend).all()
+        for friend in friends:
+            if friend.lastupdated != 0:
+                url = friend.url+"machine/since/"+str(friend.lastupdated)
+            else:
+                url = friend.url+"machine/last/100"
+
+            file = urlopen(url)
+            dicts = json.load(file)
+            for p in dicts:
+                # hacketihack
+                try:
+                    tmp = model.post(
+                        post_id = p['post_id'],
+                        timestamp = p['timestamp'],
+                        origin = p['origin'],
+                        content_type = p['content_type'],
+                        content_string = p['content_string'],
+                        source = p['source'],
+                        tags = p['tags'],
+                        reference = p['reference'],
+                        signature = p['signature'],
+                    )
+                    
+                    session = model.Session()
+                    session.add(tmp)
+            
+                    friend.lastupdated = int(time.time())
+                    session.commit()
+                    
+                except KeyError, e:
+                    raise e
 
     def dispatch_request(self, request):
         adapter = self.url_map.bind_to_environ(request.environ)

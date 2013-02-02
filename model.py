@@ -21,10 +21,12 @@ class friend(Base):
     id = Column(Integer, primary_key=True)
     screenname = Column(String)
     url = Column(String)
+    lastupdated = Column(Integer)
 
-    def __init__(self, screenname, url):
+    def __init__(self, screenname, url, lastupdated=0):
         self.screenname = screenname
         self.url = url    
+        self.lastupdated = lastupdated 
 
 post_tag = Table('post_tag', Base.metadata,
     Column('post_id', Integer, ForeignKey('post.id')),
@@ -64,7 +66,27 @@ class post(Base):
 
     def __str__(self):
         return "<Post:"+str(self.post_id)+">"
-  
+    
+    def to_serializable_dict(self):
+        """
+        grabs the important data and returns it as a serizable dictionary
+        """
+        d = {
+            "post_id": self.post_id,
+            "timestamp": self.timestamp,
+            "origin": self.origin,
+            "content_type": self.content_type,
+            "content_string": self.content_string,
+            "source": self.source,
+            "description": self.description,
+            # "reference": self.reference, 
+            #"signature": self.signature,
+            "tags": [ t.tag for t in self.tags ] 
+        }
+        
+        return d
+
+ 
 class image_post(post):
     __mapper_args__ = {'polymorphic_identity': "image"}
 
@@ -93,7 +115,7 @@ class image_post(post):
         self.image_url = self.content_string.split(';')[0]
         self.thumb_url = self.content_string.split(';')[1]
         return self
-
+    
 class tag(Base):
     __tablename__ = "tag"
 
