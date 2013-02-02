@@ -11,6 +11,9 @@ import os
 import time
 import json
 
+# debug
+# import pdb
+
 from config import Configuration
 import views
 import model
@@ -40,7 +43,8 @@ class Wurstgulasch:
 
     def query_friends(self):
         from urllib import urlopen
-        friends = model.Session().query(model.friend).all()
+        session = model.Session()
+        friends = session.query(model.friend).all()
         for friend in friends:
             if friend.lastupdated != 0:
                 url = friend.url+"machine/since/"+str(friend.lastupdated)
@@ -59,19 +63,29 @@ class Wurstgulasch:
                         content_type = p['content_type'],
                         content_string = p['content_string'],
                         source = p['source'],
-                        tags = p['tags'],
-                        reference = p['reference'],
-                        signature = p['signature'],
+                        description = p['description'],
+                        tags = []
+                        # reference = p['reference'],
+                        # signature = p['signature'],
                     )
                     
-                    session = model.Session()
+                    # check if tag already exists, if not create it.
+                    for t in p['tags']:
+                        res = session.query(model.tag).filter(model.tag.tag == t).all()
+                        if res:
+                            tmp.tags.append(res[0])
+                        else:
+                            new_tag = model.tag(t)
+                            session.add(new_tag)
+                            tmp.tags.append(new_tag)
+                                
                     session.add(tmp)
-            
-                    friend.lastupdated = int(time.time())
-                    session.commit()
-                    
+
                 except KeyError, e:
                     raise e
+
+        friend.lastupdated = int(time.time())
+        session.commit()
 
     def dispatch_request(self, request):
         adapter = self.url_map.bind_to_environ(request.environ)
