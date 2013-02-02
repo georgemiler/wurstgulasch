@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python2.6
 
 from werkzeug.wrappers import Request, Response
 from werkzeug.routing import Map, Rule
@@ -109,7 +109,8 @@ def create_app():
     app = Wurstgulasch(database_uri=Configuration().database_uri)
     app.__call__ = SharedDataMiddleware(
         app.__call__, { 
-            '/assets': './assets'
+            '/assets': './assets',
+            '/static': './static'
         }
     )
     return app

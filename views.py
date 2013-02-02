@@ -172,4 +172,4 @@ def web_add_friends(request):
         return Response(out, mimetype="text/html")
 
 def default(request):
-    return Response('lol')
+    return Response(render_template('web_general.html'), mimetype='text/html')

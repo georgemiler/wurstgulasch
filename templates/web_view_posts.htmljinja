@@ -1,8 +1,6 @@
-<html>
-<head>
-</head>
-<body>
+{% extends "web_general.html" %}
 <ul>
+{% block content %}
 {% for post in posts %}
 <li> {{post.post_id}} ({{post.content_type}}): <br>
 {% if post.content_type == "image" %}
@@ -12,5 +10,4 @@ Tags: {% for tag in post.tags %}<a href="../tags/{{tag.tag}}">{{tag.tag}}</a> {%
 {{ post.description }} </li>
 {%endfor%}
 </ul>
-</body>
-</html>
+{% endblock %}
