@@ -1,4 +1,4 @@
-#!/usr/bin/python2.6
+#!/usr/bin/python2.7
 
 from werkzeug.wrappers import Request, Response
 from werkzeug.routing import Map, Rule
