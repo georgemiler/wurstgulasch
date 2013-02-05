@@ -16,8 +16,22 @@ except NameError, e:
 from sqlalchemy import Column, Integer, String, Table, Text, ForeignKey
 from sqlalchemy.orm import relationship
 
+class user(Base):
+    __tablename__ = 'user'
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    passwordhash = Column(String)
+    tagline = Column(String)
+    bio = Column(String)
+
+    def __init__(self, name, passwordhash=None, tagline=None, bio=None):
+        self.name = name
+        self.passwordhash = passwordhash
+        self.tagline = tagline
+        self.bio = bio
+
 class friend(Base):
-    __tablename__ = 'friends'
+    __tablename__ = 'friend'
     id = Column(Integer, primary_key=True)
     screenname = Column(String)
     url = Column(String)
@@ -36,8 +50,9 @@ post_tag = Table('post_tag', Base.metadata,
 class post(Base):
     __tablename__ = 'post'
     id = Column(Integer, primary_key=True)
-    post_id = Column(Integer)
     timestamp = Column(Integer)
+    owner_id = Column(Integer, ForeignKey('user.id'))
+    owner = relationship("user") 
     origin = Column(String)
     content_type = Column('type', String)
     content_string = Column(String)

@@ -101,7 +101,14 @@ class Wurstgulasch:
     def init_database(self):
         import model
         model.Base.metadata.create_all(bind=self.db)
-
+        
+        from sqlalchemy.orm import sessionmaker
+        session = sessionmaker(bind=self.db)()
+        
+        testuser = model.user(name='testuser', tagline='I am only here because I need to be.', bio='I often live short and very excuting lives.')
+        session.add(testuser)
+        session.commit() 
+        
     def __call__(self, environment, start_response):
         return self.handle_request(environment, start_response)
 

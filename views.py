@@ -11,7 +11,7 @@ from jinja2 import Environment, FileSystemLoader
 from sqlalchemy import desc
 
 import model
-from model import tag, post, image_post, friend 
+from model import tag, post, image_post, friend, user
 from config import Configuration
 
 def render_template(template_name, **context):
@@ -126,6 +126,11 @@ def web_insert_post(request):
             ) 
             
             session = model.Session()
+
+            # add owner
+            # TODO replace by proper code once user and session handling is in place
+            u = session.query(user).filter(user.id == 1).one()
+            tmp.owner = u
 
             # add tags
             tag_strings = [ t.strip() for t in request.form['tags'].split(',') ]
