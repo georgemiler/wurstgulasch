@@ -14,19 +14,6 @@ import model
 from model import tag, post, image_post, friend, user
 from config import Configuration
 
-def render_template(template_name, **context):
-    extensions = context.pop('extensions', [])
-    globals = context.pop('globals', {})
-
-    jinja_env = Environment(
-            loader=FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates')),
-            extensions=extensions,
-    )
-    jinja_env.globals.update(globals)
-
-    #jinja_env.update_template_context(context)
-    return jinja_env.get_template(template_name).render(context)
-
 def generate_thumbnail(folder, filename):
     from PIL import Image
     im = Image.open(os.path.join(folder, filename))
@@ -55,9 +42,7 @@ def json_last(request, count):
 def web_view_posts(request, page=1, posts_per_page=30):
     query = model.Session().query(post).offset((int(page)-1)*posts_per_page).limit(posts_per_page)
     posts = [p.downcast() for p in query.all()]
-    
-    out = render_template(template_name="web_view_posts.htmljinja", posts=posts)
-    return Response(out, mimetype="text/html")        
+    return {'posts': posts} 
 
 def web_view_posts_tag(request, tagstr):
     #identify tag
@@ -69,8 +54,7 @@ def web_view_posts_tag(request, tagstr):
     else:
         raise Exception("Tag not found!")
 
-    out = render_template(template_name="web_view_posts.htmljinja", posts=posts)
-    return Response(out, mimetype="text/html")        
+    return {'posts': posts}
 
 def web_insert_post(request):
     if request.method == "POST":
@@ -145,8 +129,8 @@ def web_insert_post(request):
             
             session.add(tmp)
             session.commit()
-            
-            return Response('This was a triumph', mimetype="text/plain") 
+ 
+            return {}           
   
         elif content_type == "video":
             pass
@@ -155,14 +139,13 @@ def web_insert_post(request):
             raise Exception("Unknown Content type!")
              
     else:
-        out = render_template('web_insert_post.html')
-        return Response(out, mimetype="text/html")
+        return {} 
 
 def web_view_friends(request):
     session = model.Session()
     friends = session.query(model.friend).all()
-    out = render_template('web_view_friends.htmljinja', friends=friends)
-    return Response(out, mimetype="text/html")
+
+    return {'friends': friends}
 
 def web_add_friends(request):
     if request.method == "POST":
@@ -177,10 +160,8 @@ def web_add_friends(request):
             
             session.add(tmp)
             session.commit()
-            return Response('Friend instance added successfully!')            
+            return {}
     else:
-        out = render_template('web_add_friend.html')
-        return Response(out, mimetype="text/html")
-
+        return {}
 def default(request):
     return Response(render_template('web_general.html'), mimetype='text/html')

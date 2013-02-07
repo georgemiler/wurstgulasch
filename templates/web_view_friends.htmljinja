@@ -1,7 +1,5 @@
-<html>
-<head>
-</head>
-<body>
+{% extends "web_general.html" %}
+{% block content %}
 <ul>
 {% for friend in friends %}
 <li>
@@ -9,5 +7,5 @@
 </li>
 {%endfor%}
 </ul>
-</body>
-</html>
+<a href="add">add friend</a>
+{% endblock %}

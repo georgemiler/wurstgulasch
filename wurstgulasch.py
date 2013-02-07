@@ -7,6 +7,10 @@ from werkzeug.wsgi import SharedDataMiddleware
 
 from sqlalchemy import create_engine
 
+from jinja2 import Environment, FileSystemLoader
+
+
+
 import os
 import time
 import json
@@ -40,7 +44,15 @@ class Wurstgulasch:
                 Rule('/machine/last/<count>', endpoint='json_last')
             ]
         )
+        
+        # set up templates
+        self.jinja_env = Environment(
+            loader=FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates')),
+        )
 
+    def render_template(self, template_name, **context):
+        return self.jinja_env.get_template(template_name).render(context)
+         
     def query_friends(self):
         from urllib import urlopen
         session = model.Session()
@@ -91,7 +103,12 @@ class Wurstgulasch:
         adapter = self.url_map.bind_to_environ(request.environ)
 
         endpoint, values = adapter.match()
-        return getattr(views, endpoint)(request, **values)
+        objs =  getattr(views, endpoint)(request, **values)
+        
+        out = Response(self.render_template(template_name=endpoint+'.htmljinja', username='testuser', **objs), mimetype='text/html')
+     
+        return out
+
 
     def handle_request(self, environment, start_response):
         request = Request(environment)
