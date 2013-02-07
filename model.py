@@ -23,6 +23,7 @@ class user(Base):
     passwordhash = Column(String)
     tagline = Column(String)
     bio = Column(String)
+    friends = relationship("friend", backref="owner")   
 
     def __init__(self, name, passwordhash=None, tagline=None, bio=None):
         self.name = name
@@ -33,6 +34,7 @@ class user(Base):
 class friend(Base):
     __tablename__ = 'friend'
     id = Column(Integer, primary_key=True)
+    owner_id = Column(Integer, ForeignKey('user.id'))
     screenname = Column(String)
     url = Column(String)
     lastupdated = Column(Integer)

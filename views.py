@@ -168,7 +168,13 @@ def web_add_friends(request):
     if request.method == "POST":
         if request.form['url'] != "" and request.form['screenname'] != "":
             tmp = friend(screenname=request.form['screenname'], url=request.form['url'], lastupdated=0)
+            
             session = model.Session()
+            # add owner
+            # TODO replace by proper code once user and session handling is in place
+            u = session.query(user).filter(user.id == 1).one()
+            tmp.owner = u
+            
             session.add(tmp)
             session.commit()
             return Response('Friend instance added successfully!')            
