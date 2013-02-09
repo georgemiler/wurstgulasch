@@ -70,7 +70,7 @@ class post(Base):
     __mapper_args__ = {'polymorphic_on': content_type}
 
     def __init__(self, content_type, content_string, post_id=None, timestamp=None, origin=None, source=None, description=None, reference=None, signature=None, tags=[]):
-        self.post_id = post_id or random.randint(1,2**32)
+        self.id = post_id or random.randint(1,2**32)
         self.timestamp = timestamp or int(time.time())
         self.origin = origin or Configuration().base_url
         self.content_type = content_type
@@ -89,7 +89,7 @@ class post(Base):
         grabs the important data and returns it as a serizable dictionary
         """
         d = {
-            "post_id": self.post_id,
+            "post_id": self.id,
             "timestamp": self.timestamp,
             "origin": self.origin,
             "content_type": self.content_type,

@@ -1,5 +1,6 @@
 #!/usr/bin/python2.7
 
+
 from werkzeug.wrappers import Request, Response
 from werkzeug.routing import Map, Rule
 from werkzeug.exceptions import HTTPException
@@ -8,8 +9,6 @@ from werkzeug.wsgi import SharedDataMiddleware
 from sqlalchemy import create_engine
 
 from jinja2 import Environment, FileSystemLoader
-
-
 
 import os
 import time
@@ -24,13 +23,13 @@ import model
 
 Configuration().load_from_file("wurstgulasch.cfg")
 
+
 class Wurstgulasch:
     def __init__(self, database_uri):
         # init sqlalchemy
         self.db = create_engine(Configuration().database_uri)
         from sqlalchemy.orm import sessionmaker
         model.Session = sessionmaker(bind=self.db)
- 
         # set routing for app
         self.url_map = Map(
             [
