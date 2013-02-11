@@ -6,4 +6,5 @@ Welcome to wurstgulasch README!
     * jinja2
     * PIL
     * sqlalchemy
+    * beaker
 - gl&hf
