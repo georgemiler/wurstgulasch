@@ -8,6 +8,7 @@ from werkzeug.wrappers import Response
 
 from jinja2 import Environment, FileSystemLoader
 
+import sqlalchemy
 from sqlalchemy import desc
 
 import model
@@ -28,6 +29,26 @@ def generate_thumbnail(folder, filename):
     thumbpath = os.path.join(folder, "thumb_"+filename)
     im.save(thumbpath)
     return thumbpath
+
+
+# this method is there for structural purposes, do not remove it.
+def web_logout(request):
+    return {}
+
+def web_login(request):
+    if request.method == "POST":
+        session = model.Session()
+        try:
+            user_obj = session.query(user).filter(user.name == request.form['username']).one()
+            if user_obj and user_obj.passwordhash == request.form['password']:
+                return {'success': True, 'name': user_obj.name}
+            else:
+                return {'success': False}
+        except sqlalchemy.orm.exc.NoResultFound:
+            return {'success': False}
+    else:
+        return {'success': False}
+        
 
 def json_since(request, timestamp):
     posts = model.Session().query(post).filter(post.timestamp >= int(timestamp)).all() 

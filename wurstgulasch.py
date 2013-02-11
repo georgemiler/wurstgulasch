@@ -21,6 +21,8 @@ from config import Configuration
 import views
 import model
 
+from beaker.middleware import SessionMiddleware
+
 Configuration().load_from_file("wurstgulasch.cfg")
 
 
@@ -30,18 +32,25 @@ class Wurstgulasch:
         self.db = create_engine(Configuration().database_uri)
         from sqlalchemy.orm import sessionmaker
         model.Session = sessionmaker(bind=self.db)
+        
         # set routing for app
+        self.routes = [
+            ( '/', 'default', 'all' ),
+            ( '/logout', 'web_logout', 'all' ),
+            ( '/login', 'web_login', 'all' ),
+            ( '/<username>', 'web_view_posts', 'all'),
+            ( '/<username>/page/<page>', 'web_view_posts', 'all'),
+            ( '/<username>/json/since/<timestamp>', 'json_since', 'all'),
+            ( '/<username>/json/last/<count>', 'json_last', 'all' ),
+            ( '/<username>/create', 'web_insert_post', 'user' ),
+            ( '/<username>/stream', 'web_view_stream', 'user' ),
+            ( '/<username>/stream/page/<page>', 'web_view_stream', 'user' ),
+            ( '/<username>/friends/', 'web_view_friends', 'user' ),
+            ( '/<username>/friends/add', 'web_add_friends', 'user' ),
+            ( '/<username>/friends/delete', 'web_add_friends', 'user' ),
+        ]
         self.url_map = Map(
-            [
-                Rule('/', endpoint='default'),
-                Rule('/human/view/page/<page>', endpoint='web_view_posts'),
-                Rule('/human/view/tags/<tagstr>', endpoint='web_view_posts_tag'),
-                Rule('/human/posts/add', endpoint='web_insert_post'),
-                Rule('/human/friends/view', endpoint='web_view_friends'),
-                Rule('/human/friends/add', endpoint='web_add_friends'),
-                Rule('/machine/since/<timestamp>', endpoint='json_since'),
-                Rule('/machine/last/<count>', endpoint='json_last')
-            ]
+            [ Rule(x[0], endpoint=x[1]) for x in self.routes]
         )
         
         # set up templates
@@ -98,20 +107,36 @@ class Wurstgulasch:
         friend.lastupdated = int(time.time())
         session.commit()
 
-    def dispatch_request(self, request):
-        adapter = self.url_map.bind_to_environ(request.environ)
+    def dispatch_request(self, environment, request):
+        session = environment['beaker.session']
 
+        adapter = self.url_map.bind_to_environ(request.environ)
         endpoint, values = adapter.match()
+
         objs =  getattr(views, endpoint)(request, **values)
         
-        out = Response(self.render_template(template_name=endpoint+'.htmljinja', username='testuser', **objs), mimetype='text/html')
+        if endpoint == 'web_login' and objs['success']:
+            session['username'] = objs['name']
+            session.save()
+        elif endpoint == 'web_logout':
+            session.delete()
+
+        # determine username
+        try:
+            username = session['username']
+        except KeyError, e:
+            username = "guest"
+
+        
+
+        out = Response(self.render_template(template_name=endpoint+'.htmljinja', username=username, **objs), mimetype='text/html')
      
         return out
 
 
     def handle_request(self, environment, start_response):
         request = Request(environment)
-        response = self.dispatch_request(request)
+        response = self.dispatch_request(environment, request)
         return response(environment, start_response)
 
     def init_database(self):
@@ -121,7 +146,7 @@ class Wurstgulasch:
         from sqlalchemy.orm import sessionmaker
         session = sessionmaker(bind=self.db)()
         
-        testuser = model.user(name='testuser', tagline='I am only here because I need to be.', bio='I often live short and very excuting lives.')
+        testuser = model.user(name='testuser', passwordhash='testpassword', tagline='I am only here because I need to be.', bio='I often live short and very exciting lives.')
         session.add(testuser)
         session.commit() 
         
@@ -136,6 +161,8 @@ def create_app():
             '/static': './static'
         }
     )
+    app.__call__ = SessionMiddleware(app.__call__) 
+
     return app
 
 def shell_init():
