@@ -30,20 +30,28 @@ def generate_thumbnail(folder, filename):
     im.save(thumbpath)
     return thumbpath
 
-def verify_user(request, user):
-	pass
+def verify_user(environment, username):
+    if environment['beaker.session']['username'] == username:
+        return True
+    else:
+        raise Exception("I can't let you do that, Dave")
 
 # this method is there for structural purposes, do not remove it.
-def web_logout(request):
+def web_logout(request, environment):
+    session = environment['beaker.session']
+    session.delete()
     return {}
 
-def web_login(request):
+def web_login(request, environment):
     if request.method == "POST":
         session = model.Session()
         try:
             user_obj = session.query(user).filter(user.name == request.form['username']).one()
             if user_obj and user_obj.passwordhash == request.form['password']:
-                return {'success': True, 'name': user_obj.name}
+                web_sess = environment['beaker.session']
+                web_sess['username'] = user_obj.name
+                web_sess.save()
+                return {'success': True}
             else:
                 return {'success': False}
         except sqlalchemy.orm.exc.NoResultFound:
@@ -52,22 +60,22 @@ def web_login(request):
         return {'success': False}
         
 
-def json_since(request, timestamp):
+def json_since(request, environment, timestamp):
     posts = model.Session().query(post).filter(post.timestamp >= int(timestamp)).all() 
     dicts = [ x.to_serializable_dict() for x in posts ]
     return {'string': json.dumps(dicts, encoding="utf-8")}
 
-def json_last(request, count):
+def json_last(request, environment, count):
     posts = model.Session().query(post).order_by(desc(post.timestamp)).limit(int(count)).all() 
     dicts = [ x.to_serializable_dict() for x in posts ]
     return {'string': json.dumps(dicts, encoding="utf-8")}
 
-def web_view_posts(request, page=1, posts_per_page=30):
+def web_view_posts(request, environment, page=1, posts_per_page=30):
     query = model.Session().query(post).offset((int(page)-1)*posts_per_page).limit(posts_per_page)
     posts = [p.downcast() for p in query.all()]
     return {'posts': posts} 
 
-def web_view_posts_tag(request, tagstr):
+def web_view_posts_tag(request, environment, tagstr):
     #identify tag
     session = model.Session()
     res = session.query(tag).filter(tag.tag == tagstr).all()
@@ -79,7 +87,8 @@ def web_view_posts_tag(request, tagstr):
 
     return {'posts': posts}
 
-def web_insert_post(request, username):
+def web_insert_post(request, environment, username):
+    verify_user(environment, username)
     if request.method == "POST":
         # find out content type
         try:
@@ -135,8 +144,7 @@ def web_insert_post(request, username):
             session = model.Session()
 
             # add owner
-            # TODO replace by proper code once user and session handling is in place
-            u = session.query(user).filter(user.id == 1).one()
+            u = session.query(user).filter(user.name == username).one()
             tmp.owner = u
 
             # add tags
@@ -164,13 +172,13 @@ def web_insert_post(request, username):
     else:
         return {} 
 
-def web_view_friends(request):
+def web_view_friends(request, environment, username):
     session = model.Session()
     friends = session.query(model.friend).all()
 
     return {'friends': friends}
 
-def web_add_friends(request):
+def web_add_friends(request, environment, username):
     if request.method == "POST":
         if request.form['url'] != "" and request.form['screenname'] != "":
             tmp = friend(screenname=request.form['screenname'], url=request.form['url'], lastupdated=0)
@@ -187,5 +195,5 @@ def web_add_friends(request):
     else:
         return {}
 
-def default(request):
+def default(request, environment):
     return {}

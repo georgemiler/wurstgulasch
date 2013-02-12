@@ -32,7 +32,7 @@ class Wurstgulasch:
         self.db = create_engine(Configuration().database_uri)
         from sqlalchemy.orm import sessionmaker
         model.Session = sessionmaker(bind=self.db)
-        
+
         # set routing for app
         self.routes = [
             ( '/', 'default', 'all' ),
@@ -46,9 +46,9 @@ class Wurstgulasch:
             ( '/<username>/create', 'web_insert_post', 'user' ),
             ( '/<username>/stream', 'web_view_stream', 'user' ),
             ( '/<username>/stream/page/<page>', 'web_view_stream', 'user' ),
-            ( '/<username>/friends/', 'web_view_friends', 'user' ),
+            ( '/<username>/friends', 'web_view_friends', 'user' ),
             ( '/<username>/friends/add', 'web_add_friends', 'user' ),
-            ( '/<username>/friends/delete', 'web_add_friends', 'user' ),
+            ( '/<username>/friends/delete', 'web_delete_friends', 'user' ),
         ]
         self.url_map = Map(
             [ Rule(x[0], endpoint=x[1]) for x in self.routes]
@@ -114,14 +114,8 @@ class Wurstgulasch:
         adapter = self.url_map.bind_to_environ(request.environ)
         endpoint, values = adapter.match()
 
-        objs =  getattr(views, endpoint)(request, **values)
+        objs =  getattr(views, endpoint)(request, environment, **values)
         
-        if endpoint == 'web_login' and objs['success']:
-            session['username'] = objs['name']
-            session.save()
-        elif endpoint == 'web_logout':
-            session.delete()
-
         # determine username
         try:
             username = session['username']

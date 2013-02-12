@@ -7,5 +7,5 @@
 </li>
 {%endfor%}
 </ul>
-<a href="add">add friend</a>
+<a href="friends/add">add friend</a>
 {% endblock %}
