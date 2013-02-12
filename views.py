@@ -30,6 +30,8 @@ def generate_thumbnail(folder, filename):
     im.save(thumbpath)
     return thumbpath
 
+def verify_user(request, user):
+	pass
 
 # this method is there for structural purposes, do not remove it.
 def web_logout(request):
@@ -77,7 +79,7 @@ def web_view_posts_tag(request, tagstr):
 
     return {'posts': posts}
 
-def web_insert_post(request):
+def web_insert_post(request, username):
     if request.method == "POST":
         # find out content type
         try:

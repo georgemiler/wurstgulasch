@@ -39,6 +39,7 @@ class Wurstgulasch:
             ( '/logout', 'web_logout', 'all' ),
             ( '/login', 'web_login', 'all' ),
             ( '/<username>', 'web_view_posts', 'all'),
+            ( '/<username>/add', 'web_insert_post', 'all'),
             ( '/<username>/page/<page>', 'web_view_posts', 'all'),
             ( '/<username>/json/since/<timestamp>', 'json_since', 'all'),
             ( '/<username>/json/last/<count>', 'json_last', 'all' ),

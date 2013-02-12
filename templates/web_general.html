@@ -44,8 +44,8 @@
             <ul class="nav">
             {% if username != "guest" %}
               <li><a href="Stream">Streams</a></li>
-              <li><a href="/human/friends/view">Freunde</a></li>
-              <li><a href="/human/posts/add">Wurstgulaschen</a></li>
+              <li><a href="/{{username}}/friends/view">Freunde</a></li>
+              <li><a href="/{{username}}/posts/add">Wurstgulaschen</a></li>
             {% endif %}
             {% if username == "guest" %}
               <li><a href="/login">Login</a></li>
