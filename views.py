@@ -31,12 +31,17 @@ def generate_thumbnail(folder, filename):
     return thumbpath
 
 def verify_user(environment, username):
-    if environment['beaker.session']['username'] == username:
-        return True
-    else:
+    try:
+        if environment['beaker.session']['username'] == username:
+            return True
+        else:
+            raise Exception("I can't let you do that, Dave")
+    except KeyError, e:
         raise Exception("I can't let you do that, Dave")
 
-# this method is there for structural purposes, do not remove it.
+def get_user_obj(username, session):
+    return session.query(user).filter(user.name == username).one()
+
 def web_logout(request, environment):
     session = environment['beaker.session']
     session.delete()
@@ -58,7 +63,6 @@ def web_login(request, environment):
             return {'success': False}
     else:
         return {'success': False}
-        
 
 def json_since(request, environment, timestamp):
     posts = model.Session().query(post).filter(post.timestamp >= int(timestamp)).all() 
@@ -70,10 +74,23 @@ def json_last(request, environment, count):
     dicts = [ x.to_serializable_dict() for x in posts ]
     return {'string': json.dumps(dicts, encoding="utf-8")}
 
-def web_view_posts(request, environment, page=1, posts_per_page=30):
-    query = model.Session().query(post).offset((int(page)-1)*posts_per_page).limit(posts_per_page)
+def web_view_user_posts(request, environment, username, page=1, posts_per_page=30):
+    session = model.Session()
+    u = get_user_obj(username, session)
+
+    query = model.Session().query(post).filter(post.owner == u).offset((int(page)-1)*posts_per_page).limit(posts_per_page)
     posts = [p.downcast() for p in query.all()]
     return {'posts': posts} 
+
+def web_view_stream(request, environment, username):
+    session = model.Session()
+    u = get_user_obj(username, session)
+    verify_user(environment, username)
+
+    posts = session.query(post).filter(post.owner == u)
+
+    return {'posts': posts}
+
 
 def web_view_posts_tag(request, environment, tagstr):
     #identify tag
@@ -88,6 +105,8 @@ def web_view_posts_tag(request, environment, tagstr):
     return {'posts': posts}
 
 def web_insert_post(request, environment, username):
+    session = model.Session()
+    u = get_user_obj(username, session)
     verify_user(environment, username)
     if request.method == "POST":
         # find out content type
@@ -141,10 +160,7 @@ def web_insert_post(request, environment, username):
                 signature=None
             ) 
             
-            session = model.Session()
-
             # add owner
-            u = session.query(user).filter(user.name == username).one()
             tmp.owner = u
 
             # add tags
@@ -174,19 +190,25 @@ def web_insert_post(request, environment, username):
 
 def web_view_friends(request, environment, username):
     session = model.Session()
-    friends = session.query(model.friend).all()
+    u = get_user_obj(username, session)
+    verify_user(environment, username)
+
+    friends = session.query(model.friend).filter(model.friend.owner == u).all()
 
     return {'friends': friends}
 
 def web_add_friends(request, environment, username):
+    session = model.Session()
+
+    u = get_user_obj(username, session)
+    verify_user(environment, username) 
+    
     if request.method == "POST":
         if request.form['url'] != "" and request.form['screenname'] != "":
             tmp = friend(screenname=request.form['screenname'], url=request.form['url'], lastupdated=0)
             
-            session = model.Session()
             # add owner
             # TODO replace by proper code once user and session handling is in place
-            u = session.query(user).filter(user.id == 1).one()
             tmp.owner = u
             
             session.add(tmp)

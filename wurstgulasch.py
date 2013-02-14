@@ -38,9 +38,9 @@ class Wurstgulasch:
             ( '/', 'default', 'all' ),
             ( '/logout', 'web_logout', 'all' ),
             ( '/login', 'web_login', 'all' ),
-            ( '/<username>', 'web_view_posts', 'all'),
+            ( '/<username>', 'web_view_user_posts', 'all'),
             ( '/<username>/add', 'web_insert_post', 'all'),
-            ( '/<username>/page/<page>', 'web_view_posts', 'all'),
+            ( '/<username>/page/<page>', 'web_view_user_posts', 'all'),
             ( '/<username>/json/since/<timestamp>', 'json_since', 'all'),
             ( '/<username>/json/last/<count>', 'json_last', 'all' ),
             ( '/<username>/create', 'web_insert_post', 'user' ),
@@ -113,8 +113,9 @@ class Wurstgulasch:
 
         adapter = self.url_map.bind_to_environ(request.environ)
         endpoint, values = adapter.match()
-
-        objs =  getattr(views, endpoint)(request, environment, **values)
+        
+        view = getattr(views, endpoint)
+        objs = view(request, environment, **values)
         
         # determine username
         try:
