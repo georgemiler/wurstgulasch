@@ -64,13 +64,19 @@ def web_login(request, environment):
     else:
         return {'success': False}
 
-def json_since(request, environment, timestamp):
-    posts = model.Session().query(post).filter(post.timestamp >= int(timestamp)).all() 
+def json_since(request, environment, username, timestamp):
+    s = model.Session()
+    u = get_user_obj(username, s)
+
+    posts = s.query(post).filter(post.owner == u).filter(post.timestamp >= int(timestamp)).all() 
     dicts = [ x.to_serializable_dict() for x in posts ]
     return {'string': json.dumps(dicts, encoding="utf-8")}
 
-def json_last(request, environment, count):
-    posts = model.Session().query(post).order_by(desc(post.timestamp)).limit(int(count)).all() 
+def json_last(request, environment, username, count):
+    s = model.Session()
+    u = get_user_obj(username, s)
+
+    posts = s.query(post).filter(post.owner == u).order_by(desc(post.timestamp)).limit(int(count)).all() 
     dicts = [ x.to_serializable_dict() for x in posts ]
     return {'string': json.dumps(dicts, encoding="utf-8")}
 
@@ -160,8 +166,9 @@ def web_insert_post(request, environment, username):
                 signature=None
             ) 
             
-            # add owner
+            # add owner and origin
             tmp.owner = u
+            tmp.origin = Configuration().base_url+"/"+u.name
 
             # add tags
             tag_strings = [ t.strip() for t in request.form['tags'].split(',') ]

@@ -69,47 +69,49 @@ class Wurstgulasch:
     def query_friends(self):
         from urllib import urlopen
         session = model.Session()
-        friends = session.query(model.friend).all()
-        for friend in friends:
-            if friend.lastupdated != 0:
-                url = friend.url+"machine/since/"+str(friend.lastupdated)
-            else:
-                url = friend.url+"machine/last/100"
+        users = session.query(model.user).all()
+        for user in users:
+            for friend in user.friends:
+                if friend.lastupdated != 0:
+                    url = friend.url+"/json/since/"+str(friend.lastupdated)
+                else:
+                    url = friend.url+"/json/last/100"
+                import pdb
+                pdb.set_trace()
+                file = urlopen(url)
+                dicts = json.load(file)
+                for p in dicts:
+                    # hacketihack
+                    try:
+                        tmp = model.post(
+                            post_id = p['post_id'],
+                            timestamp = p['timestamp'],
+                            origin = p['origin'],
+                            content_type = p['content_type'],
+                            content_string = p['content_string'],
+                            source = p['source'],
+                            description = p['description'],
+                            tags = []
+                            # reference = p['reference'],
+                            # signature = p['signature'],
+                        )
+                        
+                        # check if tag already exists, if not create it.
+                        for t in p['tags']:
+                            res = session.query(model.tag).filter(model.tag.tag == t).all()
+                            if res:
+                                tmp.tags.append(res[0])
+                            else:
+                                new_tag = model.tag(t)
+                                session.add(new_tag)
+                                tmp.tags.append(new_tag)
+                                    
+                        session.add(tmp)
 
-            file = urlopen(url)
-            dicts = json.load(file)
-            for p in dicts:
-                # hacketihack
-                try:
-                    tmp = model.post(
-                        post_id = p['post_id'],
-                        timestamp = p['timestamp'],
-                        origin = p['origin'],
-                        content_type = p['content_type'],
-                        content_string = p['content_string'],
-                        source = p['source'],
-                        description = p['description'],
-                        tags = []
-                        # reference = p['reference'],
-                        # signature = p['signature'],
-                    )
-                    
-                    # check if tag already exists, if not create it.
-                    for t in p['tags']:
-                        res = session.query(model.tag).filter(model.tag.tag == t).all()
-                        if res:
-                            tmp.tags.append(res[0])
-                        else:
-                            new_tag = model.tag(t)
-                            session.add(new_tag)
-                            tmp.tags.append(new_tag)
-                                
-                    session.add(tmp)
+                    except KeyError, e:
+                        raise e
 
-                except KeyError, e:
-                    raise e
-
-        friend.lastupdated = int(time.time())
+                friend.lastupdated = int(time.time())
         session.commit()
 
     def dispatch_request(self, environment, request):
