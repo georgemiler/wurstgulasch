@@ -102,7 +102,7 @@ def web_view_stream_tag(request, environment, username, tagstr, page=40):
     else:
         raise Exception("Tag not found!")
 
-    return {'posts': posts}
+    return {'posts': posts, 'tag': tag_found}
 
 def web_insert_post(request, environment, username):
     session = model.Session()
@@ -166,13 +166,14 @@ def web_insert_post(request, environment, username):
             # add tags
             tag_strings = [ t.strip() for t in request.form['tags'].split(',') ]
             for tag_str in tag_strings:
-                res = session.query(tag).filter(tag.tag == tag_str).all()
-                if res:
-                    tmp.tags.append(res[0])
-                else:
-                    new_tag = tag(tag_str)
-                    session.add(new_tag)
-                    tmp.tags.append(new_tag)
+                if tag_str != '':
+                    res = session.query(tag).filter(tag.tag == tag_str).all()
+                    if res:
+                        tmp.tags.append(res[0])
+                    else:
+                        new_tag = tag(tag_str)
+                        session.add(new_tag)
+                        tmp.tags.append(new_tag)
             
             session.add(tmp)
             session.commit()

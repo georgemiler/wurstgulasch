@@ -2,13 +2,7 @@
 <ul>
 {% block content %}
 {% for post in posts %}
-<li> {{post.post_id}} ({{post.content_type}}): <br>
-{% if post.content_type == "image" %}
-<a href="{{post.downcast().image_url}}"><img src="{{post.downcast().thumb_url}}"></a><br>
-{% endif %}
-Tags: {% for tag in post.tags %}<a href="../tags/{{tag.tag}}">{{tag.tag}}</a> {% endfor %}<br>
-{{ post.description }} <br>
-by user {{post.owner.name}}</li>
+{% include "inc_post.htmljinja" %}
 {%endfor%}
 </ul>
 {% endblock %}
