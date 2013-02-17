@@ -154,8 +154,8 @@ def web_insert_post(request, environment, username):
             f.close()
     
             thumb_path = generate_thumbnail(assets_path, filename) 
-            image_url = Configuration().base_url+image_path           
-            thumb_url = Configuration().base_url+thumb_path
+            image_url = Configuration().base_url+'assets/'+filename          
+            thumb_url = Configuration().base_url+'assets/thumb_'+filename
 
                    
             tmp = image_post(

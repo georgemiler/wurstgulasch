@@ -1,6 +1,5 @@
 #!/usr/bin/python2.7
 
-
 from werkzeug.wrappers import Request, Response
 from werkzeug.routing import Map, Rule
 from werkzeug.exceptions import HTTPException
@@ -23,7 +22,6 @@ import model
 
 from beaker.middleware import SessionMiddleware
 
-Configuration().load_from_file("wurstgulasch.cfg")
 
 
 class Wurstgulasch:
@@ -155,7 +153,10 @@ class Wurstgulasch:
     def __call__(self, environment, start_response):
         return self.handle_request(environment, start_response)
 
-def create_app():
+def create_app(conf_file_location='wurstgulasch.cfg'):
+
+    Configuration().load_from_file(conf_file_location)
+
     app = Wurstgulasch(database_uri=Configuration().database_uri)
     app.__call__ = SharedDataMiddleware(
         app.__call__, { 
@@ -167,7 +168,8 @@ def create_app():
 
     return app
 
-def shell_init():
+def shell_init(conf_file_location='wurstgulasch.cfg'):
+    Configuration().load_from_file(conf_file_location)
     import model
     return {
         'wurstgulasch': Wurstgulasch(database_uri=Configuration().database_uri),
