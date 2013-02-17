@@ -84,7 +84,8 @@ def web_view_user_posts(request, environment, username, page=1, posts_per_page=3
     session = model.Session()
     u = get_user_obj(username, session)
 
-    query = model.Session().query(post).filter(post.owner == u).offset((int(page)-1)*posts_per_page).limit(posts_per_page)
+    origin = Configuration().base_url+"/"+u.name
+    query = model.Session().query(post).filter(post.owner == u).filter(post.origin == origin).offset((int(page)-1)*posts_per_page).limit(posts_per_page)
     posts = [p.downcast() for p in query.all()]
     return {'posts': posts, 'user': u} 
 

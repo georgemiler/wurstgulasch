@@ -76,8 +76,6 @@ class Wurstgulasch:
                     url = friend.url+"/json/since/"+str(friend.lastupdated)
                 else:
                     url = friend.url+"/json/last/100"
-                import pdb
-                pdb.set_trace()
                 file = urlopen(url)
                 dicts = json.load(file)
                 for p in dicts:
@@ -96,6 +94,10 @@ class Wurstgulasch:
                             # signature = p['signature'],
                         )
                         
+                        tmp.owner = user
+                        import pdb
+                        pdb.set_trace()
+        
                         # check if tag already exists, if not create it.
                         for t in p['tags']:
                             res = session.query(model.tag).filter(model.tag.tag == t).all()

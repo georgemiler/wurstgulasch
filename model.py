@@ -23,6 +23,8 @@ class user(Base):
     passwordhash = Column(String)
     tagline = Column(String)
     bio = Column(String)
+    avatar_url = Column(String)
+    avatar_small_url = Column(String)
     friends = relationship("friend", backref="owner")   
 
     def __init__(self, name, passwordhash=None, tagline=None, bio=None):
@@ -52,6 +54,7 @@ post_tag = Table('post_tag', Base.metadata,
 class post(Base):
     __tablename__ = 'post'
     id = Column(Integer, primary_key=True)
+    post_id = Column(Integer)
     timestamp = Column(Integer)
     owner_id = Column(Integer, ForeignKey('user.id'))
     owner = relationship("user") 
@@ -70,7 +73,7 @@ class post(Base):
     __mapper_args__ = {'polymorphic_on': content_type}
 
     def __init__(self, content_type, content_string, post_id=None, timestamp=None, origin=None, source=None, description=None, reference=None, signature=None, tags=[]):
-        self.id = post_id or random.randint(1,2**32)
+        self.post_id = post_id or random.randint(1,2**32)
         self.timestamp = timestamp or int(time.time())
         self.origin = origin or Configuration().base_url
         self.content_type = content_type
@@ -89,7 +92,7 @@ class post(Base):
         grabs the important data and returns it as a serizable dictionary
         """
         d = {
-            "post_id": self.id,
+            "post_id": self.post_id,
             "timestamp": self.timestamp,
             "origin": self.origin,
             "content_type": self.content_type,
@@ -122,8 +125,6 @@ class image_post(post):
         )
         self.image_url = image_url
         self.thumb_url = thumb_url
-
-        __mapper_args__ = {'polymorphic_identity': "image"}
 
     def downcast(self):
         """
