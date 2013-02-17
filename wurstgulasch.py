@@ -45,10 +45,14 @@ class Wurstgulasch:
             ( '/<username>/json/last/<count>', 'json_last', 'all' ),
             ( '/<username>/create', 'web_insert_post', 'user' ),
             ( '/<username>/stream', 'web_view_stream', 'user' ),
+            ( '/<username>/stream/tag', 'web_view_stream_tag', 'user' ),
+            ( '/<username>/stream/tag/page/<page>', 'web_view_stream_tag', 'user' ),
             ( '/<username>/stream/page/<page>', 'web_view_stream', 'user' ),
             ( '/<username>/friends', 'web_view_friends', 'user' ),
             ( '/<username>/friends/add', 'web_add_friends', 'user' ),
             ( '/<username>/friends/delete', 'web_delete_friends', 'user' ),
+            ( '/<username>/profile', 'web_view_profile', 'all' ),
+            ( '/<username>/profile/change', 'web_change_profile', 'user'),
         ]
         self.url_map = Map(
             [ Rule(x[0], endpoint=x[1]) for x in self.routes]

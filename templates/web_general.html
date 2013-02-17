@@ -53,7 +53,7 @@
             {% endif %}
             </ul>
           </div><!--/.nav-collapse -->
-          <p class="navbar-text pull-right">ohai, {{username}} {% if username != "guest" %}<a href="/logout">[Logout]</a>{% endif %}</p>
+          <p class="navbar-text pull-right">ohai, {{username}} {% if username != "guest" %}<a href="/{{username}}/profile/change">[Profile]</a> <a href="/logout">[Logout]</a>{% endif %}</p>
         </div>
       </div>
     </div>

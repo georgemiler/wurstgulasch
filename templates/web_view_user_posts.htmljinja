@@ -1,6 +1,8 @@
 {% extends "web_general.html" %}
-<ul>
 {% block content %}
+<h1>{{user.name}}'s Wurstgulasch</h1>
+<p><i>{{user.tagline}}</i></p>
+<ul>
 {% for post in posts %}
 <li> {{post.post_id}} ({{post.content_type}}): <br>
 {% if post.content_type == "image" %}

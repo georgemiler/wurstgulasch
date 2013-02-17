@@ -80,7 +80,7 @@ def web_view_user_posts(request, environment, username, page=1, posts_per_page=3
 
     query = model.Session().query(post).filter(post.owner == u).offset((int(page)-1)*posts_per_page).limit(posts_per_page)
     posts = [p.downcast() for p in query.all()]
-    return {'posts': posts} 
+    return {'posts': posts, 'user': u} 
 
 def web_view_stream(request, environment, username):
     session = model.Session()
@@ -92,7 +92,7 @@ def web_view_stream(request, environment, username):
     return {'posts': posts}
 
 
-def web_view_posts_tag(request, environment, tagstr):
+def web_view_stream_tag(request, environment, username, tagstr, page=40):
     #identify tag
     session = model.Session()
     res = session.query(tag).filter(tag.tag == tagstr).all()
@@ -216,6 +216,32 @@ def web_add_friends(request, environment, username):
             return {}
     else:
         return {}
+
+def web_view_profile(request, environment, username):
+    s = model.Session()
+    u = get_user_obj(username, s)
+
+    return {'user': u}
+
+def web_change_profile(request, environment, username):
+    s = model.Session()
+    u = get_user_obj(username, s)
+    verify_user(environment, username)
+
+    if request.method == 'POST':
+        # TODO: strip HTML
+        u.tagline = request.form['tagline']
+        u.bio = request.form['bio']
+        
+        # TODO: use hash
+        if request.form['password'] == request.form['password2'] and request.form['password'] != '':
+            u.passwordhash = request.form['password']
+        
+        s.commit()
+        return {'success': True, 'user': u}
+    
+    else:
+        return {'user': u}
 
 def default(request, environment):
     return {}
