@@ -1,0 +1,9 @@
+{% extends "web_general.html" %}
+{% block content %}
+<h1>Posts tagged with "{{tag.tag}}"</h1>
+<ul>
+{% for post in posts %}
+{% include "inc_post.htmljinja" %}
+{% endfor %}
+</ul>
+{% endblock %}

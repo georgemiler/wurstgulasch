@@ -1,0 +1,18 @@
+{% extends "web_general.html" %}
+{% block content %}
+
+<form method=POST>
+{% if success %}Yeay{% endif %}
+<table>
+    <tr>
+        <td>Username</td><td><input type="text" name="username"></td>
+    </tr>
+    <tr>
+        <td>Password</td><td><input type="password" name="password"></td>
+    </tr>
+    <tr>
+        <td colspan="2"><input type="submit"></td>
+    </tr>
+</table>
+</form>
+{% endblock %}

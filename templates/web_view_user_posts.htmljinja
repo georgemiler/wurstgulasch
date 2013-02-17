@@ -1,0 +1,10 @@
+{% extends "web_general.html" %}
+{% block content %}
+<h1>{{user.name}}'s Wurstgulasch</h1>
+<p><i>{{user.tagline}}</i></p>
+<ul>
+{% for post in posts %}
+{% include "inc_post.htmljinja" %}
+{%endfor%}
+</ul>
+{% endblock %}

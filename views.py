@@ -8,24 +8,12 @@ from werkzeug.wrappers import Response
 
 from jinja2 import Environment, FileSystemLoader
 
+import sqlalchemy
 from sqlalchemy import desc
 
 import model
-from model import tag, post, image_post, friend 
+from model import tag, post, image_post, friend, user
 from config import Configuration
-
-def render_template(template_name, **context):
-    extensions = context.pop('extensions', [])
-    globals = context.pop('globals', {})
-
-    jinja_env = Environment(
-            loader=FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates')),
-            extensions=extensions,
-    )
-    jinja_env.globals.update(globals)
-
-    #jinja_env.update_template_context(context)
-    return jinja_env.get_template(template_name).render(context)
 
 def generate_thumbnail(folder, filename):
     from PIL import Image
@@ -42,24 +30,76 @@ def generate_thumbnail(folder, filename):
     im.save(thumbpath)
     return thumbpath
 
-def json_since(request, timestamp):
-    posts = model.Session().query(post).filter(post.timestamp >= int(timestamp)).all() 
-    dicts = [ x.to_serializable_dict() for x in posts ]
-    return Response(json.dumps(dicts, encoding="utf-8"), mimetype="text/plain")
+def verify_user(environment, username):
+    try:
+        if environment['beaker.session']['username'] == username:
+            return True
+        else:
+            raise Exception("I can't let you do that, Dave")
+    except KeyError, e:
+        raise Exception("I can't let you do that, Dave")
 
-def json_last(request, count):
-    posts = model.Session().query(post).order_by(desc(post.timestamp)).limit(int(count)).all() 
-    dicts = [ x.to_serializable_dict() for x in posts ]
-    return Response(json.dumps(dicts, encoding="utf-8"), mimetype="text/plain")
+def get_user_obj(username, session):
+    return session.query(user).filter(user.name == username).one()
 
-def web_view_posts(request, page=1, posts_per_page=30):
-    query = model.Session().query(post).offset((int(page)-1)*posts_per_page).limit(posts_per_page)
+def web_logout(request, environment):
+    session = environment['beaker.session']
+    session.delete()
+    return {}
+
+def web_login(request, environment):
+    if request.method == "POST":
+        session = model.Session()
+        try:
+            user_obj = session.query(user).filter(user.name == request.form['username']).one()
+            if user_obj and user_obj.passwordhash == request.form['password']:
+                web_sess = environment['beaker.session']
+                web_sess['username'] = user_obj.name
+                web_sess.save()
+                return {'success': True}
+            else:
+                return {'success': False}
+        except sqlalchemy.orm.exc.NoResultFound:
+            return {'success': False}
+    else:
+        return {'success': False}
+
+def json_since(request, environment, username, timestamp):
+    s = model.Session()
+    u = get_user_obj(username, s)
+
+    posts = s.query(post).filter(post.owner == u).filter(post.timestamp >= int(timestamp)).all() 
+    dicts = [ x.to_serializable_dict() for x in posts ]
+    return {'string': json.dumps(dicts, encoding="utf-8")}
+
+def json_last(request, environment, username, count):
+    s = model.Session()
+    u = get_user_obj(username, s)
+
+    posts = s.query(post).filter(post.owner == u).order_by(desc(post.timestamp)).limit(int(count)).all() 
+    dicts = [ x.to_serializable_dict() for x in posts ]
+    return {'string': json.dumps(dicts, encoding="utf-8")}
+
+def web_view_user_posts(request, environment, username, page=1, posts_per_page=30):
+    session = model.Session()
+    u = get_user_obj(username, session)
+
+    origin = Configuration().base_url+"/"+u.name
+    query = model.Session().query(post).filter(post.owner == u).filter(post.origin == origin).offset((int(page)-1)*posts_per_page).limit(posts_per_page)
     posts = [p.downcast() for p in query.all()]
-    
-    out = render_template(template_name="web_view_posts.htmljinja", posts=posts)
-    return Response(out, mimetype="text/html")        
+    return {'posts': posts, 'user': u} 
 
-def web_view_posts_tag(request, tagstr):
+def web_view_stream(request, environment, username):
+    session = model.Session()
+    u = get_user_obj(username, session)
+    verify_user(environment, username)
+
+    posts = session.query(post).filter(post.owner == u)
+
+    return {'posts': posts}
+
+
+def web_view_stream_tag(request, environment, username, tagstr, page=40):
     #identify tag
     session = model.Session()
     res = session.query(tag).filter(tag.tag == tagstr).all()
@@ -69,10 +109,12 @@ def web_view_posts_tag(request, tagstr):
     else:
         raise Exception("Tag not found!")
 
-    out = render_template(template_name="web_view_posts.htmljinja", posts=posts)
-    return Response(out, mimetype="text/html")        
+    return {'posts': posts, 'tag': tag_found}
 
-def web_insert_post(request):
+def web_insert_post(request, environment, username):
+    session = model.Session()
+    u = get_user_obj(username, session)
+    verify_user(environment, username)
     if request.method == "POST":
         # find out content type
         try:
@@ -125,23 +167,26 @@ def web_insert_post(request):
                 signature=None
             ) 
             
-            session = model.Session()
+            # add owner and origin
+            tmp.owner = u
+            tmp.origin = Configuration().base_url+"/"+u.name
 
             # add tags
             tag_strings = [ t.strip() for t in request.form['tags'].split(',') ]
             for tag_str in tag_strings:
-                res = session.query(tag).filter(tag.tag == tag_str).all()
-                if res:
-                    tmp.tags.append(res[0])
-                else:
-                    new_tag = tag(tag_str)
-                    session.add(new_tag)
-                    tmp.tags.append(new_tag)
+                if tag_str != '':
+                    res = session.query(tag).filter(tag.tag == tag_str).all()
+                    if res:
+                        tmp.tags.append(res[0])
+                    else:
+                        new_tag = tag(tag_str)
+                        session.add(new_tag)
+                        tmp.tags.append(new_tag)
             
             session.add(tmp)
             session.commit()
-            
-            return Response('This was a triumph', mimetype="text/plain") 
+ 
+            return {}           
   
         elif content_type == "video":
             pass
@@ -150,26 +195,62 @@ def web_insert_post(request):
             raise Exception("Unknown Content type!")
              
     else:
-        out = render_template('web_insert_post.html')
-        return Response(out, mimetype="text/html")
+        return {} 
 
-def web_view_friends(request):
+def web_view_friends(request, environment, username):
     session = model.Session()
-    friends = session.query(model.friend).all()
-    out = render_template('web_view_friends.htmljinja', friends=friends)
-    return Response(out, mimetype="text/html")
+    u = get_user_obj(username, session)
+    verify_user(environment, username)
 
-def web_add_friends(request):
+    friends = session.query(model.friend).filter(model.friend.owner == u).all()
+
+    return {'friends': friends}
+
+def web_add_friends(request, environment, username):
+    session = model.Session()
+
+    u = get_user_obj(username, session)
+    verify_user(environment, username) 
+    
     if request.method == "POST":
         if request.form['url'] != "" and request.form['screenname'] != "":
             tmp = friend(screenname=request.form['screenname'], url=request.form['url'], lastupdated=0)
-            session = model.Session()
+            
+            # add owner
+            # TODO replace by proper code once user and session handling is in place
+            tmp.owner = u
+            
             session.add(tmp)
             session.commit()
-            return Response('Friend instance added successfully!')            
+            return {}
     else:
-        out = render_template('web_add_friend.html')
-        return Response(out, mimetype="text/html")
+        return {}
 
-def default(request):
-    return Response('lol')
+def web_view_profile(request, environment, username):
+    s = model.Session()
+    u = get_user_obj(username, s)
+
+    return {'user': u}
+
+def web_change_profile(request, environment, username):
+    s = model.Session()
+    u = get_user_obj(username, s)
+    verify_user(environment, username)
+
+    if request.method == 'POST':
+        # TODO: strip HTML
+        u.tagline = request.form['tagline']
+        u.bio = request.form['bio']
+        
+        # TODO: use hash
+        if request.form['password'] == request.form['password2'] and request.form['password'] != '':
+            u.passwordhash = request.form['password']
+        
+        s.commit()
+        return {'success': True, 'user': u}
+    
+    else:
+        return {'user': u}
+
+def default(request, environment):
+    return {}

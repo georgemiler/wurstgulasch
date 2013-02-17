@@ -1,3 +1,10 @@
 Welcome to wurstgulasch README!
 
-docs are over there: https://projects.sft.mx/projects/wurstgulasch/wiki
+- specs are in https://pad.foebud.org/TwRRQ9KLds
+- wurstgulasch depends on:
+    * werkzeug
+    * jinja2
+    * PIL
+    * sqlalchemy
+    * beaker
+- gl&hf

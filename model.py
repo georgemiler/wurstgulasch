@@ -16,9 +16,27 @@ except NameError, e:
 from sqlalchemy import Column, Integer, String, Table, Text, ForeignKey
 from sqlalchemy.orm import relationship
 
-class friend(Base):
-    __tablename__ = 'friends'
+class user(Base):
+    __tablename__ = 'user'
     id = Column(Integer, primary_key=True)
+    name = Column(String)
+    passwordhash = Column(String)
+    tagline = Column(String)
+    bio = Column(String)
+    avatar_url = Column(String)
+    avatar_small_url = Column(String)
+    friends = relationship("friend", backref="owner")   
+
+    def __init__(self, name, passwordhash=None, tagline=None, bio=None):
+        self.name = name
+        self.passwordhash = passwordhash
+        self.tagline = tagline
+        self.bio = bio
+
+class friend(Base):
+    __tablename__ = 'friend'
+    id = Column(Integer, primary_key=True)
+    owner_id = Column(Integer, ForeignKey('user.id'))
     screenname = Column(String)
     url = Column(String)
     lastupdated = Column(Integer)
@@ -38,6 +56,8 @@ class post(Base):
     id = Column(Integer, primary_key=True)
     post_id = Column(Integer)
     timestamp = Column(Integer)
+    owner_id = Column(Integer, ForeignKey('user.id'))
+    owner = relationship("user") 
     origin = Column(String)
     content_type = Column('type', String)
     content_string = Column(String)
@@ -105,8 +125,6 @@ class image_post(post):
         )
         self.image_url = image_url
         self.thumb_url = thumb_url
-
-        __mapper_args__ = {'polymorphic_identity': "image"}
 
     def downcast(self):
         """
