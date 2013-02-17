@@ -95,8 +95,6 @@ class Wurstgulasch:
                         )
                         
                         tmp.owner = user
-                        import pdb
-                        pdb.set_trace()
         
                         # check if tag already exists, if not create it.
                         for t in p['tags']:
