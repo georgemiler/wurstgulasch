@@ -146,13 +146,14 @@ def web_insert_post(request, environment, username):
                 raise Exception("Unsupported File Type")
             
             filename = md5(image).hexdigest() + "." + sub_type
-            image_path = os.path.join('assets', filename)
+            assets_path = os.path.join(Configuration().base_path, 'assets')
+            image_path = os.path.join(assets_path, filename)
             
             f = open(image_path, 'w')
             f.write(image)
             f.close()
     
-            thumb_path = generate_thumbnail('assets', filename) 
+            thumb_path = generate_thumbnail(assets_path, filename) 
             image_url = Configuration().base_url+image_path           
             thumb_url = Configuration().base_url+thumb_path
 

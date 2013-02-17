@@ -13,5 +13,7 @@ class Configuration:
         self.instance_name = parser.get("base", "instance_name")
         self.instance_owner = parser.get("base", "instance_owner")
         self.base_url = parser.get("base", "base_url")
+        self.base_path = parser.get("base", "base_path")
  
+
         self.database_uri = parser.get("db", "database_uri")
