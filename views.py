@@ -96,12 +96,15 @@ def web_view_stream(request, environment, username):
 
     posts = session.query(post).filter(post.owner == u)
 
-    return {'posts': posts}
+    return {'posts': posts, 'user': u, 'show_tags': True}
 
 
 def web_view_stream_tag(request, environment, username, tagstr, page=40):
-    #identify tag
     session = model.Session()
+    u = get_user_obj(username, session)
+    verify_user(environment, username) 
+
+    #identify tag
     res = session.query(tag).filter(tag.tag == tagstr).all()
     if res:
         tag_found = res[0]
@@ -109,7 +112,7 @@ def web_view_stream_tag(request, environment, username, tagstr, page=40):
     else:
         raise Exception("Tag not found!")
 
-    return {'posts': posts, 'tag': tag_found}
+    return {'posts': posts, 'tag': tag_found, 'show_tags': True, 'user': u}
 
 def web_insert_post(request, environment, username):
     session = model.Session()
