@@ -170,7 +170,7 @@ def web_insert_post(request, environment, username):
             
             # add owner and origin
             tmp.owner = u
-            tmp.origin = Configuration().base_url+"/"+u.name
+            tmp.origin = Configuration().base_url+u.name
 
             # add tags
             tag_strings = [ t.strip() for t in request.form['tags'].split(',') ]
