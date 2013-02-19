@@ -44,6 +44,7 @@ class Wurstgulasch:
             ( '/<username>/json/since/<timestamp>', 'json_since', 'all'),
             ( '/<username>/json/last/<count>', 'json_last', 'all' ),
             ( '/<username>/create', 'web_insert_post', 'user' ),
+            ( '/<username>/info', 'json_user_info', 'all' ),
             # posts
             ( '/<username>/post/<postid>', 'web_view_post_detail', 'user' ),
             ( '/<username>/stream/tag/<tagstr>/page/<page>', 'web_view_stream_tag', 'user' ),
@@ -128,17 +129,16 @@ class Wurstgulasch:
         endpoint, values = adapter.match()
         
         view = getattr(views, endpoint)
-        objs = view(request, environment, **values)
-        
-        # determine username
-        try:
-            username = session['username']
-        except KeyError, e:
-            username = "guest"
-
-        
-
-        out = Response(self.render_template(template_name=endpoint+'.htmljinja', username=username, **objs), mimetype='text/html')
+        result = view(request, environment, **values)
+        if endpoint.startswith("json_"):
+            out = Response(result, mimetype='text/json')
+        else:
+            # determine username
+            try:
+                username = session['username']
+            except KeyError, e:
+                username = "guest"
+            out = Response(self.render_template(template_name=endpoint+'.htmljinja', username=username, **result), mimetype='text/html')
      
         return out
 

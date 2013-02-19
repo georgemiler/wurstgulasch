@@ -72,7 +72,7 @@ def json_since(request, environment, username, timestamp):
 
     posts = s.query(post).filter(post.owner == u).filter(post.timestamp >= int(timestamp)).all() 
     dicts = [ x.to_serializable_dict() for x in posts ]
-    return {'string': json.dumps(dicts, encoding="utf-8")}
+    return json.dumps(dicts, encoding="utf-8")
 
 def json_last(request, environment, username, count):
     s = model.Session()
@@ -80,7 +80,13 @@ def json_last(request, environment, username, count):
 
     posts = s.query(post).filter(post.owner == u).order_by(desc(post.timestamp)).limit(int(count)).all() 
     dicts = [ x.to_serializable_dict() for x in posts ]
-    return {'string': json.dumps(dicts, encoding="utf-8")}
+    return json.dumps(dicts, encoding="utf-8")
+
+def json_user_info(request, environment, username):
+    session = model.Session()
+    user = get_user_obj(username, session)
+    userdict = user.to_serializable_dict()
+    return json.dumps(userdict, encoding="utf-8")
 
 def web_view_user_posts(request, environment, username, page=1, posts_per_page=30):
     session = model.Session()

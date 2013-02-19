@@ -32,6 +32,15 @@ class user(Base):
         self.passwordhash = passwordhash
         self.tagline = tagline
         self.bio = bio
+    
+    def to_serializable_dict(self):
+        return {
+            'name': self.name,
+            'tagline': self.tagline,
+            'bio' : self.bio,
+            'avatar_url' : self.avatar_url,
+            'avatar_small_url' : self.avatar_small_url
+        }
 
 class friend(Base):
     __tablename__ = 'friend'
