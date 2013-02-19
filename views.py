@@ -201,6 +201,14 @@ def web_insert_post(request, environment, username):
     else:
         return {} 
 
+def web_view_post_detail(request, environment, username, postid):
+    s = model.Session()
+    u = get_user_obj(username, s)
+    
+    p = s.query(model.post).filter(post.post_id == int(postid)).all()[0]
+
+    return {'post': p, 'user': u, 'show_tags': True}
+
 def web_view_friends(request, environment, username):
     session = model.Session()
     u = get_user_obj(username, session)

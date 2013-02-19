@@ -3,7 +3,7 @@
 <h1>Posts tagged with "{{tag.tag}}"</h1>
 <ul>
 {% for post in posts %}
-{% include "inc_post.htmljinja" %}
+<li>{% include "inc_post.htmljinja" %}</li>
 {% endfor %}
 </ul>
 {% endblock %}

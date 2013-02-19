@@ -1,7 +1,7 @@
-<li> {{post.post_id}} ({{post.content_type}}): <br>
+<a href='/{{user.name}}/post/{{post.post_id}}'>{{post.post_id}}</a> ({{post.content_type}}): <br>
 {% if post.content_type == "image" %}
 <a href="{{post.downcast().image_url}}"><img src="{{post.downcast().thumb_url}}"></a><br>
 {% endif %}
 {% if show_tags and post.tags %} Tags: {% for tag in post.tags %}<a href="/{{user.name}}/stream/tag/{{tag.tag}}">{{tag.tag}}</a> {% endfor %}<br>{% endif %}
-{{ post.description }} <br>
-by user <a href="{{post.origin}}">{{post.origin.split('/')[::-1][0]}}</a></li>
+{% if post.description %}{{ post.description }} <br>{% endif %}
+by user <a href="{{post.origin}}">{{post.origin.split('/')[::-1][0]}}</a>
