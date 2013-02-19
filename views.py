@@ -3,6 +3,8 @@ import random
 import time
 from hashlib import md5
 import json
+from PIL import Image
+from StringIO import StringIO
 
 from werkzeug.wrappers import Response
 from werkzeug.utils import redirect
@@ -14,24 +16,12 @@ from sqlalchemy import desc
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 
+import util
 import model
 from model import tag, post, image_post, friend, user
 from config import Configuration
 
-def generate_thumbnail(folder, filename):
-    from PIL import Image
-    im = Image.open(os.path.join(folder, filename))
-                    
-    # guttenberg'd from:
-    #   http://jargonsummary.wordpress.com/2011/01/08/how-to-resize-images-with-python/
-    # TODO: Improve algorithm
-    basewidth = 300
-    wpercent = (basewidth / float(im.size[0]))
-    hsize = int((float(im.size[1]) * float(wpercent)))
-    im = im.resize((basewidth, hsize), Image.ANTIALIAS)
-    thumbpath = os.path.join(folder, "thumb_"+filename)
-    im.save(thumbpath)
-    return thumbpath
+
 
 def verify_user(environment, username):
     try:
@@ -43,13 +33,13 @@ def verify_user(environment, username):
         raise Exception("I can't let you do that, Dave")
 
 def verify_admin(environment):
-	try:
-		if environment['beaker.session']['username'] == "admin":
-			return True
-		else:
-			raise Exception("I can't let you do that, Dave")
-	except KeyError, e:
-		raise Exception("I can't let you do that, Dave")
+    try:
+        if environment['beaker.session']['username'] == "admin":
+            return True
+        else:
+            raise Exception("I can't let you do that, Dave")
+    except KeyError, e:
+        raise Exception("I can't let you do that, Dave")
 
 def get_user_obj(username, session):
     return session.query(user).filter(user.name == username).one()
@@ -140,38 +130,34 @@ def web_insert_post(request, environment, username):
         # different content types = different methods
         if content_type == "image":
             # figure out if source is URL or uploaded file and acquire content + mimetype
-            uploaded = request.files.get('file')
-            if uploaded:
-                image = uploaded.read()
-                mimetype = uploaded.content_type
+            file_obj = request.files.get('file')
+            if file_obj:
+                mimetype = file_obj.content_type
             elif request.form['content_string'] != None:
                 # TODO verify URL
                 from urllib import urlopen
-                f = urlopen(request.form['content_string'])
-                image = f.read()
-                mimetype = f.info().gettype()
+                file_obj = urlopen(request.form['content_string'])
+                mimetype = file_ob.info().gettype()
             else:
                 raise Exception("No Data given")
             
-            # continue file processing
-            main_type = mimetype.split('/')[0]
-            sub_type = mimetype.split('/')[1]
+            filetype = util.check_mimetype(mimetype, ["image"], ["jpeg", "png", "gif", "tiff"])
+            # TODO check for exceptions
+            buf_image = file_obj.read();
+            image = Image.open(StringIO(buf_image))
+            thumbnail = util.generate_thumbnail(image, 300)
+
+            assetspath = os.path.join(Configuration().base_path, 'assets')
+            filename = md5(buf_image).hexdigest() + "." + filetype;
+            imagepath = os.path.join(assetspath, filename)
+            thumbnailpath = os.path.join(assetspath, "thumb_" + filename)
+
+            # TODO check for exceptions
+            image.save(imagepath)
+            thumbnail.save(thumbnailpath)
             
-            if main_type != "image" or sub_type not in ['jpeg', 'png', 'gif', 'tiff']:
-                raise Exception("Unsupported File Type")
-            
-            filename = md5(image).hexdigest() + "." + sub_type
-            assets_path = os.path.join(Configuration().base_path, 'assets')
-            image_path = os.path.join(assets_path, filename)
-            
-            f = open(image_path, 'w')
-            f.write(image)
-            f.close()
-    
-            thumb_path = generate_thumbnail(assets_path, filename) 
             image_url = Configuration().base_url+'assets/'+filename          
             thumb_url = Configuration().base_url+'assets/thumb_'+filename
-
                    
             tmp = image_post(
                 image_url=image_url,
@@ -265,7 +251,31 @@ def web_change_profile(request, environment, username):
         # TODO: strip HTML
         u.tagline = request.form['tagline']
         u.bio = request.form['bio']
-        
+
+        # avatar
+        uploaded = request.files.get('avatar')
+        if uploaded:
+            mimetype = uploaded.content_type
+            try:
+                filetype = util.check_mimetype(mimetype, ["image"], ["jpeg", "png", "gif", "tiff"])
+            except Exception, e:
+                pass # TODO no valid filetype
+            else:
+                buf_image = uploaded.read()
+                image = util.force_quadratic(Image.open(StringIO(buf_image)))
+                thumbnail = util.generate_thumbnail(image, 50)
+
+                assetspath = os.path.join(Configuration().base_path, 'assets')
+                filename = "avatar_" + md5(buf_image).hexdigest() + "." + filetype;
+                imagepath = os.path.join(assetspath, filename)
+                thumbnailpath = os.path.join(assetspath, "thumb_" + filename)
+
+                image.save(imagepath)
+                thumbnail.save(thumbnailpath)
+
+                u.avatar_url = Configuration().base_url+'assets/'+filename
+                u.avatar_small_url = Configuration().base_url+'assets/thumb_'+filename
+
         # TODO: use hash
         if request.form['password'] == request.form['password2'] and request.form['password'] != '':
             u.passwordhash = request.form['password']
@@ -277,75 +287,76 @@ def web_change_profile(request, environment, username):
         return {'user': u}
 
 def admin_view_users(request, environment):
-	verify_admin(environment)
-	s = model.Session()
+    verify_admin(environment)
+    s = model.Session()
 
-	users = s.query(model.user).all()
+    users = s.query(model.user).all()
 
-	return {'users' : users}
+    return {'users' : users}
 
 def admin_create_user(request, environment):
-	verify_admin(environment)
-	s = model.Session()
-	
-	if request.method == 'POST':
-		username = request.form['username'].strip(" \t") #remove leading/trailing whitespaces
-		password = request.form['password']
-		if username != "" and password != "":
-			u = model.user(name = username, passwordhash = password) #TODO: hash password
-			s.add(u)
-			try:
-				s.commit()
-			except IntegrityError, e:
-				return {'success': False}
-			return {'success': True}	
-		else:
-			return {'success' : False}
-	else:
-		return {}
+    verify_admin(environment)
+    s = model.Session()
+    
+    if request.method == 'POST':
+        username = request.form['username'].strip() #remove leading/trailing whitespaces
+        password = request.form['password']
+        if username != "" and password != "":
+            u = model.user(name = username, passwordhash = password) #TODO: hash password
+            s.add(u)
+            try:
+                s.commit()
+            except IntegrityError, e:
+                return {'success': False}
+            return {'success': True}    
+        else:
+            return {'success' : False}
+    else:
+        return {}
 
 def admin_reset_password(request, environment, username):
-	verify_admin(environment)
-	s = model.Session()
-	try:
-		u = s.query(model.user).filter(model.user.name == username).one()
-	except NoResultFound, e:
-		raise Exception("User " + username + " does not exist")
+    verify_admin(environment)
+    s = model.Session()
+    try:
+        u = get_user_obj(username, s)
+    except NoResultFound, e:
+        raise Exception("User " + username + " does not exist")
 
-	if request.method == 'POST':
-		password = request.form['password']
-		if password == "":
-			return {'success' : False, 'user' : u}
-		u.passwordhash = password
-		s.commit()
-		return {'success' : True, 'user' : u}
-	else:
-		return {'success' : False, 'user' : u}
+    if request.method == 'POST':
+        password = request.form['password']
+        if password == "":
+            return {'success' : False, 'user' : u}
+        u.passwordhash = password
+        s.commit()
+        return {'success' : True, 'user' : u}
+    else:
+        return {'success' : False, 'user' : u}
 
-		
+        
 def admin_delete_user(request, environment, username):
-	verify_admin(environment)
-	s = model.Session()
-	# don't delete admin user
-	if username == 'admin':
-		return {'success': False}
+    verify_admin(environment)
+    # don't delete admin user
+    if username == 'admin':
+        return {'success': False}
 
-	try:
-		user = s.query(model.user).filter(model.user.name == username).one()
-	except NoResultFound, e:
-		return {'success' : False}
-	# delete all posts by user
-	posts = s.query(model.post).filter(model.post.owner == user).all()
-	for post in posts:
-		s.delete(post)
-	# delete friends
-	for friend in user.friends:
-		s.delete(friend)
-	s.delete(user)
-	s.commit()
+    s = model.Session()
+    try:
+        user == get_user_obj(username, s)
+    except NoResultFound, e:
+        return {'success' : False}
+    # delete all posts by user
+    posts = s.query(model.post).filter(model.post.owner == user).all()
+    for post in posts:
+        s.delete(post)
+    # delete friends
+    for friend in user.friends:
+        s.delete(friend)
+    s.delete(user)
+    s.commit()
 
-	return{'success' : True}
+    return{'success' : True}
 
 
 def default(request, environment):
     return {}
+
