@@ -4,7 +4,7 @@
 <p><i>{{user.tagline}}</i></p>
 <ul>
 {% for post in posts %}
-{% include "inc_post.htmljinja" %}
+<li>{% include "inc_post.htmljinja" %}</li>
 {%endfor%}
 </ul>
 {% endblock %}

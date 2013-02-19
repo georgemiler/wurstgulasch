@@ -33,18 +33,22 @@ class Wurstgulasch:
 
         # set routing for app
         self.routes = [
+            # janitoring
             ( '/', 'default', 'all' ),
             ( '/logout', 'web_logout', 'all' ),
             ( '/login', 'web_login', 'all' ),
+            # user specific
             ( '/<username>', 'web_view_user_posts', 'all'),
             ( '/<username>/add', 'web_insert_post', 'all'),
             ( '/<username>/page/<page>', 'web_view_user_posts', 'all'),
             ( '/<username>/json/since/<timestamp>', 'json_since', 'all'),
             ( '/<username>/json/last/<count>', 'json_last', 'all' ),
             ( '/<username>/create', 'web_insert_post', 'user' ),
+            # posts
+            ( '/<username>/post/<postid>', 'web_view_post_detail', 'user' ),
+            ( '/<username>/stream/tag/<tagstr>/page/<page>', 'web_view_stream_tag', 'user' ),
             ( '/<username>/stream', 'web_view_stream', 'user' ),
             ( '/<username>/stream/tag/<tagstr>', 'web_view_stream_tag', 'user' ),
-            ( '/<username>/stream/tag/<tagstr>/page/<page>', 'web_view_stream_tag', 'user' ),
             ( '/<username>/stream/page/<page>', 'web_view_stream', 'user' ),
             ( '/<username>/friends', 'web_view_friends', 'user' ),
             ( '/<username>/friends/add', 'web_add_friends', 'user' ),

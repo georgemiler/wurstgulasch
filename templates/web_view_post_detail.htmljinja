@@ -1,0 +1,4 @@
+{% extends "web_general.html" %}
+{% block content %}
+{% include "inc_post.htmljinja" %}
+{% endblock %}
