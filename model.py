@@ -19,7 +19,7 @@ from sqlalchemy.orm import relationship
 class user(Base):
     __tablename__ = 'user'
     id = Column(Integer, primary_key=True)
-    name = Column(String)
+    name = Column(String, unique=True)
     passwordhash = Column(String)
     tagline = Column(String)
     bio = Column(String)
@@ -27,7 +27,7 @@ class user(Base):
     avatar_small_url = Column(String)
     friends = relationship("friend", backref="owner")   
 
-    def __init__(self, name, passwordhash=None, tagline=None, bio=None):
+    def __init__(self, name, passwordhash=None, tagline='', bio=''):
         self.name = name
         self.passwordhash = passwordhash
         self.tagline = tagline

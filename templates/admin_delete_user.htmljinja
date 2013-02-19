@@ -1,0 +1,8 @@
+{% extends "web_general.html" %}
+{% block content %}
+{% if success %}
+	User deleted successfully <a href="../view">[back]</a>
+{% else %}
+	Failed to delete user <a href="../view">[back]</a>
+{% endif %}
+{% endblock %}
