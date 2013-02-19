@@ -308,7 +308,7 @@ def admin_reset_password(request, environment, username):
     verify_admin(environment)
     s = model.Session()
     try:
-        u = s.query(model.user).filter(model.user.name == username).one()
+        u = get_user_obj(username, s)
     except NoResultFound, e:
         raise Exception("User " + username + " does not exist")
 
@@ -325,13 +325,13 @@ def admin_reset_password(request, environment, username):
         
 def admin_delete_user(request, environment, username):
     verify_admin(environment)
-    s = model.Session()
     # don't delete admin user
     if username == 'admin':
         return {'success': False}
 
+    s = model.Session()
     try:
-        user = s.query(model.user).filter(model.user.name == username).one()
+        user == get_user_obj(username, s)
     except NoResultFound, e:
         return {'success' : False}
     # delete all posts by user
