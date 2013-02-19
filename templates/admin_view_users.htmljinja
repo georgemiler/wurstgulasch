@@ -1,0 +1,13 @@
+{% extends "web_general.html" %}
+{% block content %}
+<h1>Registered Users</h1>
+<ul>
+	{% for user in users %}
+	<li>{{user.name}}
+		{% if user.name != "admin" %}
+		<a href="delete/{{user.name}}">[delete]</a></li>
+		{% endif %}
+	{% endfor %}
+</ul>
+<a href='create'>Add user</a>
+{% endblock %}

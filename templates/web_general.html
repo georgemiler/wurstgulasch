@@ -47,6 +47,9 @@
               <li><a href="/{{username}}">Mein Wurstgulasch</a></li>
               <li><a href="/{{username}}/friends">Freunde</a></li>
               <li><a href="/{{username}}/add">Wurstgulaschen</a></li>
+			  {% if username == "admin" %}
+				<li><a href="/admin/users/view">Admin</a></li>
+			  {% endif %}
             {% endif %}
             {% if username == "guest" %}
               <li><a href="/login">Login</a></li>
@@ -60,7 +63,7 @@
 
     <div class="container">
     {% block content %}
-    <h1>lolwat</1>
+    <h1>lolwat</h1>
     {% endblock %}
     </div> <!-- /container -->
 

@@ -54,7 +54,10 @@ class Wurstgulasch:
             ( '/<username>/friends/add', 'web_add_friends', 'user' ),
             ( '/<username>/friends/delete', 'web_delete_friends', 'user' ),
             ( '/<username>/profile', 'web_view_profile', 'all' ),
-            ( '/<username>/profile/change', 'web_change_profile', 'user'),
+            ( '/<username>/profile/change', 'web_change_profile', 'user' ),
+			( '/admin/users/create', 'admin_create_user', 'admin' ),
+			( '/admin/users/view', 'admin_view_users', 'admin' ),
+			( '/admin/users/delete/<username>', 'admin_delete_user', 'admin' )
         ]
         self.url_map = Map(
             [ Rule(x[0], endpoint=x[1]) for x in self.routes]
@@ -151,7 +154,9 @@ class Wurstgulasch:
         session = sessionmaker(bind=self.db)()
         
         testuser = model.user(name='testuser', passwordhash='testpassword', tagline='I am only here because I need to be.', bio='I often live short and very exciting lives.')
+        adminuser = model.user(name='admin', passwordhash='admin')
         session.add(testuser)
+        session.add(adminuser)
         session.commit() 
         
     def __call__(self, environment, start_response):
