@@ -7,6 +7,9 @@
 	<tr><td>Password</td><td><input type="password" name="password"></td></tr>
 	<tr><td colspan="2"><input type="submit"></td></tr>
 </table>
+{% if success %}
+	<span style="color: green">User has been added successfully</span><br>
+{% endif %}
 
 </form>
 {% endblock %}

@@ -5,8 +5,10 @@
 	{% for user in users %}
 	<li>{{user.name}}
 		{% if user.name != "admin" %}
-		<a href="delete/{{user.name}}">[delete]</a></li>
+		<a href="delete/{{user.name}}">[delete]</a>
+		<a href="resetpassword/{{user.name}}">[reset password]</a>
 		{% endif %}
+	</li>
 	{% endfor %}
 </ul>
 <a href='create'>Add user</a>

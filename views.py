@@ -285,7 +285,6 @@ def admin_create_user(request, environment):
 		password = request.form['password']
 		if username != "" and password != "":
 			u = model.user(name = username, passwordhash = password) #TODO: hash password
-		
 			s.add(u)
 			try:
 				s.commit()
@@ -296,7 +295,26 @@ def admin_create_user(request, environment):
 			return {'success' : False}
 	else:
 		return {}
-			
+
+def admin_reset_password(request, environment, username):
+	verify_admin(environment)
+	s = model.Session()
+	try:
+		u = s.query(model.user).filter(model.user.name == username).one()
+	except NoResultFound, e:
+		raise Exception("User " + username + " does not exist")
+
+	if request.method == 'POST':
+		password = request.form['password']
+		if password == "":
+			return {'success' : False, 'user' : u}
+		u.passwordhash = password
+		s.commit()
+		return {'success' : True, 'user' : u}
+	else:
+		return {'success' : False, 'user' : u}
+
+		
 def admin_delete_user(request, environment, username):
 	verify_admin(environment)
 	s = model.Session()

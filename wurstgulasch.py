@@ -53,6 +53,7 @@ class Wurstgulasch:
             ( '/<username>/profile/change', 'web_change_profile', 'user' ),
 			( '/admin/users/create', 'admin_create_user', 'admin' ),
 			( '/admin/users/view', 'admin_view_users', 'admin' ),
+			( '/admin/users/resetpassword/<username>', 'admin_reset_password', 'admin' ),
 			( '/admin/users/delete/<username>', 'admin_delete_user', 'admin' )
         ]
         self.url_map = Map(
