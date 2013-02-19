@@ -34,10 +34,10 @@ def force_quadratic(image):
     if width == height:
         return image
     size = min(width, height)
-    offset = max(width, height)/2
+    delta = (max(width, height)-size)/2
     if width < height:
-        box = (0, offset, size, size+offset)
+        box = (0, delta, size, size+delta)
     else:
-        box = (offset, 0, size+offset, size)
+        box = (delta, 0, size+delta, size)
     image = image.crop(box)
     return image
