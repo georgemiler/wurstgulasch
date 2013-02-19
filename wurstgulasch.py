@@ -20,7 +20,7 @@ from config import Configuration
 import views
 import model
 
-from beaker.middleware import SessionMiddleware
+from beaker.middleware import SessionMiddleware, CacheMiddleware
 
 
 
@@ -174,7 +174,9 @@ def create_app(conf_file_location='wurstgulasch.cfg'):
             '/static': './static'
         }
     )
-    app.__call__ = SessionMiddleware(app.__call__) 
+
+    #app.__call__ = CacheMiddleware(app.__call__) 
+    app.__call__ = SessionMiddleware(app.__call__, type='dbm', data_dir='./sessions') 
 
     return app
 
