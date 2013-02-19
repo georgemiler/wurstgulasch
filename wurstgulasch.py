@@ -55,6 +55,7 @@ class Wurstgulasch:
             ( '/<username>/friends/delete', 'web_delete_friends', 'user' ),
             ( '/<username>/profile', 'web_view_profile', 'all' ),
             ( '/<username>/profile/change', 'web_change_profile', 'user' ),
+			# admin stuff
 			( '/admin/users/create', 'admin_create_user', 'admin' ),
 			( '/admin/users/view', 'admin_view_users', 'admin' ),
 			( '/admin/users/resetpassword/<username>', 'admin_reset_password', 'admin' ),
