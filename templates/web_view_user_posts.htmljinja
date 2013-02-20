@@ -1,6 +1,6 @@
 {% extends "web_general.html" %}
 {% block content %}
-<h1><a href="{{user.avatar_url}}" rel="lightbox">
+<h1><a class="fancybox" href="{{user.avatar_url}}">
 	<img src="{{user.avatar_small_url}}"></a>&nbsp;{{user.name}}'s Wurstgulasch
 </h1>
 <p><i>

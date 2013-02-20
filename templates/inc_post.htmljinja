@@ -1,6 +1,6 @@
 <a href='/{{user.name}}/post/{{post.post_id}}'>{{post.post_id}}</a> ({{post.content_type}}): <br>
 	{% if post.content_type == "image" %}
-		<a href="{{post.downcast().image_url}}" rel="lightbox" title="{{post.downcast().description}}">
+		<a class="fancybox" href="{{post.downcast().image_url}}" title="{{post.downcast().description}}">
 			<img src="{{post.downcast().thumb_url}}">
 		</a><br>
 	{% endif %}
