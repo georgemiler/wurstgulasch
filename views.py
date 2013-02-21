@@ -21,34 +21,55 @@ import model
 from model import tag, post, image_post, friend, user
 from config import Configuration
 
-
-
+"""
+checks if the username in the is identic to <username>, raises Exception('InsufficientPrivileges') otherwise.
+"""
 def verify_user(environment, username):
     try:
         if environment['beaker.session']['username'] == username:
             return True
         else:
-            raise Exception("I can't let you do that, Dave")
+            raise Exception("InsufficientPrivileges")
     except KeyError, e:
-        raise Exception("I can't let you do that, Dave")
+        raise Exception("InsufficientPrivileges")
 
+"""
+checks if the username in the session is 'admin', raises Exception('InsufficientPrivileges') otherwise.
+"""
 def verify_admin(environment):
     try:
         if environment['beaker.session']['username'] == "admin":
             return True
         else:
-            raise Exception("I can't let you do that, Dave")
+            raise Exception("InsufficientPrivileges")
     except KeyError, e:
-        raise Exception("I can't let you do that, Dave")
+        raise Exception("InsufficientProivileges")
 
+"""
+returns the user object with the name <username>.
+
+Raises Exception('NoSuchUser') if <username> is not known to the system.
+"""
 def get_user_obj(username, session):
-    return session.query(user).filter(user.name == username).one()
+    try:
+        u =session.query(user).filter(user.name == username).one()
+    except: Exception, e:
+        raise Exception('NoSuchUser')
 
+"""
+Deletes the client's session
+"""
 def web_logout(request, environment):
     session = environment['beaker.session']
     session.delete()
     return {}
 
+"""
+verifies username and password, sets the username attribute of the session accordingly.
+
+Possible errortype values:
+ * 'LoginInvalid' if the the login was not successful.
+"""
 def web_login(request, environment):
     if request.method == "POST":
         session = model.Session()
@@ -60,34 +81,80 @@ def web_login(request, environment):
                 web_sess.save()
                 return {'success': True}
             else:
-                return {'success': False}
+                return {'success': False, 'errortype': 'LoginInvalid'}
         except sqlalchemy.orm.exc.NoResultFound:
-            return {'success': False}
+            return {'success': False, 'errortype': 'LoginInvalid'}
     else:
         return {'success': False}
 
+"""
+returns json representations of <username>'s posts since <timestamp>, in consequence an empty array
+if there are none.
+if an error occurs, a json representation of the error handling is returned.
+
+Possible errortype values:
+ * 'NoSuchUser'
+"""
 def json_since(request, environment, username, timestamp):
     s = model.Session()
-    u = get_user_obj(username, s)
+    try:
+        u = get_user_obj(username, s)
+    except Exception, e:
+        return json.dumps({'success': False, 'errortype': 'NoSuchUser'})
 
     posts = s.query(post).filter(post.owner == u).filter(post.timestamp >= int(timestamp)).all() 
     dicts = [ x.to_serializable_dict() for x in posts ]
     return json.dumps(dicts, encoding="utf-8")
 
+"""
+returns json representations of <username>'s last <count> posts, 
+in consequence an empty array if there are none.
+if an error occurs, a json representation of the error handling is returned.
+
+Possible errortype values:
+ * 'NoSuchUser'
+"""
 def json_last(request, environment, username, count):
     s = model.Session()
-    u = get_user_obj(username, s)
+    try:
+        u = get_user_obj(username, s)
+    except Exception, e:
+        return json.dumps({'success': False, 'errortype': 'NoSuchUser'})
 
     posts = s.query(post).filter(post.owner == u).order_by(desc(post.timestamp)).limit(int(count)).all() 
     dicts = [ x.to_serializable_dict() for x in posts ]
     return json.dumps(dicts, encoding="utf-8")
 
+
+"""
+retunrns a json representation of some of <username>'s user data.
+if an error occurs, a json representation of the standard error handling is returned.
+
+Possible errortype values:
+ * 'NoSuchUser' if the <username> is unknown to the system.
+
+"""
 def json_user_info(request, environment, username):
     session = model.Session()
-    user = get_user_obj(username, session)
+    try:
+        user = get_user_obj(username, session)
+    except Exception, e:
+        return  json.dumps({'success': False, 'errortype': 'NoSuchUser'})
+    
     userdict = user.to_serializable_dict()
     return json.dumps(userdict, encoding="utf-8")
 
+
+"""
+returns the <page> <posts_per_page> posts created by <username> as 'posts', <username>'s 
+user object as 'user', an empty array if there aren't any.
+
+Possible errortype values are:
+ * 'NoSuchUser' if <username> is unknown to the system.
+
+May raise the following Exceptions:
+ * Exception('NoSuchUser')
+"""
 def web_view_user_posts(request, environment, username, page=1, posts_per_page=30):
     session = model.Session()
     u = get_user_obj(username, session)
@@ -95,19 +162,51 @@ def web_view_user_posts(request, environment, username, page=1, posts_per_page=3
     origin = Configuration().base_url+u.name
     query = model.Session().query(post).filter(post.owner == u).filter(post.origin == origin).offset((int(page)-1)*posts_per_page).limit(posts_per_page)
     posts = [p.downcast() for p in query.all()]
-    return {'posts': posts, 'user': u} 
+    
+    return {'success': True, 'posts': posts, 'user': u} 
 
-def web_view_stream(request, environment, username):
+
+"""
+returns the <page> <posts_per_page> posts created by <username> as 'posts', <username>'s 
+user object as 'user', an empty array if there aren't any.
+
+Possible errortype values are:
+ * 'InputMakesNoSense' if at least one of <page> or <posts_per_page> is negative
+
+May raise the following Exceptions:
+ * Exception('NoSuchUser')
+ * Exception('InsufficientPrivileges')
+"""
+def web_view_stream(request, environment, username, page=1, posts_per_page=30):
+    if page < 0 or posts_per_page < 0:
+        raise Exception('InputMakesNoSense') 
+
     session = model.Session()
+
+    # may raise Exception('NoSuchUser')
     u = get_user_obj(username, session)
+    
+    # may raise an Exception with the string 'InsufficentPrivileges'
     verify_user(environment, username)
+    
+    posts = session.query(post).filter(post.owner == u).offset((int(page)-1)*posts_per_page).limit(posts_per_page)
 
-    posts = session.query(post).filter(post.owner == u)
+    return {'success': True, 'posts': posts, 'user': u}
 
-    return {'posts': posts, 'user': u, 'show_tags': True}
+"""
+returns the <page> <posts_per_page> posts owned by <username> and tagged with <tagstr> as 'posts' and the <username>'s 
+user object as 'user'
 
+Possible errortype values are:
+ * 
 
-def web_view_stream_tag(request, environment, username, tagstr, page=40):
+May raise the following Exceptions:
+ * Exception('NoSuchUser')
+ * Exception('InsufficientPrivileges')
+ * Exception('InputMakesNoSense')
+ * Exception('TagNotFound')
+"""
+def web_view_stream_tag(request, environment, username, tagstr, page=1, posts_per_page=1):
     session = model.Session()
     u = get_user_obj(username, session)
     verify_user(environment, username) 
@@ -118,10 +217,19 @@ def web_view_stream_tag(request, environment, username, tagstr, page=40):
         tag_found = res[0]
         posts = tag_found.posts
     else:
-        raise Exception("Tag not found!")
+        raise Exception("TagNotFound")
 
     return {'posts': posts, 'tag': tag_found, 'show_tags': True, 'user': u}
 
+
+"""
+Saves a post to <username>'s wurstgulasch.
+
+Possible errortypes are:
+ * 
+May raise the following Exceptions:
+ * 
+"""
 def web_insert_post(request, environment, username):
     session = model.Session()
     u = get_user_obj(username, session)
@@ -205,6 +313,14 @@ def web_insert_post(request, environment, username):
     else:
         return {} 
 
+"""
+Saves a post to <username>'s wurstgulasch.
+
+Possible errortypes are:
+ * 
+May raise the following Exceptions:
+ * 
+"""
 def web_view_post_detail(request, environment, username, postid):
     s = model.Session()
     u = get_user_obj(username, s)
@@ -213,6 +329,14 @@ def web_view_post_detail(request, environment, username, postid):
 
     return {'post': p, 'user': u, 'show_tags': True}
 
+"""
+Saves a post to <username>'s wurstgulasch.
+
+Possible errortypes are:
+ * 
+May raise the following Exceptions:
+ * 
+"""
 def web_view_friends(request, environment, username):
     session = model.Session()
     u = get_user_obj(username, session)
@@ -222,6 +346,14 @@ def web_view_friends(request, environment, username):
 
     return {'friends': friends}
 
+"""
+Saves a post to <username>'s wurstgulasch.
+
+Possible errortypes are:
+ * 
+May raise the following Exceptions:
+ * 
+"""
 def web_add_friends(request, environment, username):
     session = model.Session()
 
@@ -242,12 +374,28 @@ def web_add_friends(request, environment, username):
     else:
         return {}
 
+"""
+Saves a post to <username>'s wurstgulasch.
+
+Possible errortypes are:
+ * 
+May raise the following Exceptions:
+ * 
+"""
 def web_view_profile(request, environment, username):
     s = model.Session()
     u = get_user_obj(username, s)
 
     return {'user': u}
 
+"""
+makes changes to <username>'s user object
+
+Possible errortypes are:
+ * 
+May raise the following Exceptions:
+ * 
+"""
 def web_change_profile(request, environment, username):
     s = model.Session()
     u = get_user_obj(username, s)
@@ -292,6 +440,14 @@ def web_change_profile(request, environment, username):
     else:
         return {'user': u}
 
+"""
+returns all user objects known to the system.
+
+Possible errortypes are:
+ * 
+May raise the following Exceptions:
+ * 
+"""
 def admin_view_users(request, environment):
     verify_admin(environment)
     s = model.Session()
@@ -300,6 +456,14 @@ def admin_view_users(request, environment):
 
     return {'users' : users}
 
+"""
+creates a new user and adds it to the database.
+
+Possible errortypes are:
+ * 
+May raise the following Exceptions:
+ * 
+"""
 def admin_create_user(request, environment):
     verify_admin(environment)
     s = model.Session()
@@ -320,6 +484,14 @@ def admin_create_user(request, environment):
     else:
         return {}
 
+"""
+resets  <username>'s password
+
+Possible errortypes are:
+ * 
+May raise the following Exceptions:
+ * 
+"""
 def admin_reset_password(request, environment, username):
     verify_admin(environment)
     s = model.Session()
@@ -338,7 +510,14 @@ def admin_reset_password(request, environment, username):
     else:
         return {'success' : False, 'user' : u}
 
-        
+"""
+deletes <username>'s user object from the database
+
+Possible errortypes are:
+ * 
+May raise the following Exceptions:
+ * 
+"""       
 def admin_delete_user(request, environment, username):
     verify_admin(environment)
     # don't delete admin user
@@ -363,6 +542,14 @@ def admin_delete_user(request, environment, username):
     return{'success' : True}
 
 
+"""
+returns an empty dictionary.
+
+Possible errortypes are:
+ * 
+May raise the following Exceptions:
+ * 
+"""
 def default(request, environment):
     return {}
 
