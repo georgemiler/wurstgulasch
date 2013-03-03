@@ -43,7 +43,7 @@ def verify_admin(environment):
         else:
             raise Exception("InsufficientPrivileges")
     except KeyError, e:
-        raise Exception("InsufficientProivileges")
+        raise Exception("InsufficientPrivileges")
 
 """
 returns the user object with the name <username>.
@@ -53,7 +53,7 @@ Raises Exception('NoSuchUser') if <username> is not known to the system.
 def get_user_obj(username, session):
     try:
         u =session.query(user).filter(user.name == username).one()
-    except: Exception, e:
+    except Exception, e:
         raise Exception('NoSuchUser')
 
 """
