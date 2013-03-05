@@ -43,7 +43,7 @@ def verify_admin(environment):
        else:
            raise Exception("InsufficientPrivileges")
     except KeyError, e:
-        raise Exception("InsufficientProivileges")
+        raise Exception("InsufficientPrivileges")
 
 def get_user_obj(username, session):
     """
