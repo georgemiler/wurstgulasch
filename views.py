@@ -21,29 +21,43 @@ import model
 from model import tag, post, image_post, friend, user
 from config import Configuration
 
-def verify_user(environment, username):
+
+def authorized(function):
     """
     checks if the username in the is identic to <username>, raises Exception('InsufficientPrivileges') otherwise.
     """
-    try:
-        if environment['beaker.session']['username'] == username:
-            return True
-        else:
+    def inner(*args, **kwargs):
+        environment = args[1]
+        try:
+            username = kwargs['username']
+        except KeyError, e:
+            raise Exception('NoUsernamePassed')
+        
+        try:
+            if environment['beaker.session']['username'] == username:
+                return function(*args, **kwargs)
+            else:
+                raise Exception("InsufficientPrivileges")
+        except KeyError, e:
             raise Exception("InsufficientPrivileges")
-    except KeyError, e:
-        raise Exception("InsufficientPrivileges")
+    
+    return inner
 
-def verify_admin(environment):
+def admin(function):
     """
     checks if the username in the session is 'admin', raises Exception('InsufficientPrivileges') otherwise.
     """
-    try:
-       if environment['beaker.session']['username'] == "admin":
-           return True
-       else:
-           raise Exception("InsufficientPrivileges")
-    except KeyError, e:
-        raise Exception("InsufficientPrivileges")
+    def inner(*args, **kwargs):
+        environment = args[1]
+        try:
+            if environment['beaker.session']['username'] == "admin":
+                return function(*args, **kwargs)
+            else:
+                raise Exception("InsufficientPrivileges")
+        except KeyError, e:
+            raise Exception("InsufficientPrivileges")
+
+    return inner
 
 def get_user_obj(username, session):
     """
@@ -55,6 +69,10 @@ def get_user_obj(username, session):
         u =session.query(user).filter(user.name == username).one()
     except Exception, e:
         raise Exception('NoSuchUser')
+
+    if not u:
+        raise Exception('NoSuchUser')
+    return u
 
 def web_logout(request, environment):
     """
@@ -167,7 +185,7 @@ def web_view_user_posts(request, environment, username, page=1, posts_per_page=3
     
     return {'success': True, 'posts': posts, 'user': u} 
 
-
+@authorized
 def web_view_stream(request, environment, username, page=1, posts_per_page=30):
     """
     returns the <page> <posts_per_page> posts created by <username> as 'posts', <username>'s 
@@ -189,13 +207,11 @@ def web_view_stream(request, environment, username, page=1, posts_per_page=30):
     # may raise Exception('NoSuchUser')
     u = get_user_obj(username, session)
     
-    # may raise an Exception with the string 'InsufficentPrivileges'
-    verify_user(environment, username)
-    
     posts = session.query(post).filter(post.owner == u).offset((int(page)-1)*posts_per_page).limit(posts_per_page)
 
     return {'success': True, 'posts': posts, 'user': u}
 
+@authorized
 def web_view_stream_tag(request, environment, username, tagstr, page=1, posts_per_page=1):
     """
     returns the <page> <posts_per_page> posts owned by <username> and tagged with <tagstr> as 'posts' and the <username>'s 
@@ -213,7 +229,6 @@ def web_view_stream_tag(request, environment, username, tagstr, page=1, posts_pe
     
     session = model.Session()
     u = get_user_obj(username, session)
-    verify_user(environment, username) 
 
     #identify tag
     res = session.query(tag).filter(tag.tag == tagstr).all()
@@ -225,7 +240,7 @@ def web_view_stream_tag(request, environment, username, tagstr, page=1, posts_pe
 
     return {'posts': posts, 'tag': tag_found, 'show_tags': True, 'user': u}
 
-
+@authorized
 def web_insert_post(request, environment, username):
     """
     Saves a post to <username>'s wurstgulasch.
@@ -237,7 +252,6 @@ def web_insert_post(request, environment, username):
     """ 
     session = model.Session()
     u = get_user_obj(username, session)
-    verify_user(environment, username)
     if request.method == "POST":
         # find out content type
         try:
@@ -335,6 +349,7 @@ def web_view_post_detail(request, environment, username, postid):
     return {'post': p, 'user': u, 'show_tags': True}
 
 
+@authorized
 def web_view_friends(request, environment, username):
     """
     Saves a post to <username>'s wurstgulasch.
@@ -346,12 +361,12 @@ def web_view_friends(request, environment, username):
     """ 
     session = model.Session()
     u = get_user_obj(username, session)
-    verify_user(environment, username)
 
     friends = session.query(model.friend).filter(model.friend.owner == u).all()
 
     return {'friends': friends}
 
+@authorized
 def web_add_friends(request, environment, username):
     """
     Saves a post to <username>'s wurstgulasch.
@@ -364,7 +379,6 @@ def web_add_friends(request, environment, username):
     session = model.Session()
 
     u = get_user_obj(username, session)
-    verify_user(environment, username) 
     
     if request.method == "POST":
         if request.form['url'] != "" and request.form['screenname'] != "":
@@ -394,6 +408,7 @@ def web_view_profile(request, environment, username):
 
     return {'user': u}
 
+@authorized
 def web_change_profile(request, environment, username):
     """
     makes changes to <username>'s user object
@@ -405,7 +420,6 @@ def web_change_profile(request, environment, username):
     """
     s = model.Session()
     u = get_user_obj(username, s)
-    verify_user(environment, username)
 
     if request.method == 'POST':
         # TODO: strip HTML
@@ -446,7 +460,7 @@ def web_change_profile(request, environment, username):
     else:
         return {'user': u}
 
-
+@admin
 def admin_view_users(request, environment):
     """
     returns all user objects known to the system.
@@ -456,13 +470,13 @@ def admin_view_users(request, environment):
     May raise the following Exceptions:
      * 
     """
-    verify_admin(environment)
     s = model.Session()
 
     users = s.query(model.user).all()
 
     return {'users' : users}
 
+@admin
 def admin_create_user(request, environment):
     """
     creates a new user and adds it to the database.
@@ -472,7 +486,6 @@ def admin_create_user(request, environment):
     May raise the following Exceptions:
      * 
     """
-    verify_admin(environment)
     s = model.Session()
     
     if request.method == 'POST':
@@ -491,7 +504,7 @@ def admin_create_user(request, environment):
     else:
         return {}
 
-
+@admin
 def admin_reset_password(request, environment, username):
     """
     resets  <username>'s password
@@ -501,7 +514,6 @@ def admin_reset_password(request, environment, username):
     May raise the following Exceptions:
      * 
     """
-    verify_admin(environment)
     s = model.Session()
     try:
         u = get_user_obj(username, s)
@@ -518,7 +530,7 @@ def admin_reset_password(request, environment, username):
     else:
         return {'success' : False, 'user' : u}
 
-      
+@admin  
 def admin_delete_user(request, environment, username):
     """
     deletes <username>'s user object from the database
@@ -528,7 +540,6 @@ def admin_delete_user(request, environment, username):
     May raise the following Exceptions:
      * 
     """
-    verify_admin(environment)
     # don't delete admin user
     if username == 'admin':
         return {'success': False}
