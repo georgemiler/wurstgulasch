@@ -29,7 +29,7 @@ class Wurstgulasch:
         # init sqlalchemy
         self.db = create_engine(Configuration().database_uri)
         from sqlalchemy.orm import sessionmaker
-        model.Session = sessionmaker(bind=self.db)
+        self.session_factory = sessionmaker(bind=self.db)
 
         # set routing for app
         self.routes = [
@@ -128,8 +128,11 @@ class Wurstgulasch:
         adapter = self.url_map.bind_to_environ(request.environ)
         endpoint, values = adapter.match()
         
+        # create sqlalchemy session
+        db_session = self.session_factory()
+
         view = getattr(views, endpoint)
-        result = view(request, environment, **values)
+        result = view(request, environment, db_session, **values)
         if endpoint.startswith("json_"):
             out = Response(result, mimetype='text/json')
         else:

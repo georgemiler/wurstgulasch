@@ -74,7 +74,7 @@ def get_user_obj(username, session):
         raise Exception('NoSuchUser')
     return u
 
-def web_logout(request, environment):
+def web_logout(request, environment, session):
     """
     Deletes the client's session
     """
@@ -82,7 +82,7 @@ def web_logout(request, environment):
     session.delete()
     return {}
 
-def web_login(request, environment):
+def web_login(request, environment, session):
     """
     verifies username and password, sets the username attribute of the session accordingly.
 
@@ -90,7 +90,6 @@ def web_login(request, environment):
      * 'LoginInvalid' if the the login was not successful.
     """
     if request.method == "POST":
-        session = model.Session()
         try:
             user_obj = session.query(user).filter(user.name == request.form['username']).one()
             if user_obj and user_obj.passwordhash == request.form['password']:
@@ -106,7 +105,7 @@ def web_login(request, environment):
         return {'success': False}
 
 
-def json_since(request, environment, username, timestamp):
+def json_since(request, environment, session, username, timestamp):
     """
     returns json representations of <username>'s posts since <timestamp>, in consequence an empty array
     if there are none.
@@ -115,17 +114,16 @@ def json_since(request, environment, username, timestamp):
     Possible errortype values:
      * 'NoSuchUser'
     """
-    s = model.Session()
     try:
         u = get_user_obj(username, s)
     except Exception, e:
         return json.dumps({'success': False, 'errortype': 'NoSuchUser'})
 
-    posts = s.query(post).filter(post.owner == u).filter(post.timestamp >= int(timestamp)).all() 
+    posts = session.query(post).filter(post.owner == u).filter(post.timestamp >= int(timestamp)).all() 
     dicts = [ x.to_serializable_dict() for x in posts ]
     return json.dumps(dicts, encoding="utf-8")
 
-def json_last(request, environment, username, count):
+def json_last(request, environment, session, username, count):
     """
     returns json representations of <username>'s last <count> posts, 
     in consequence an empty array if there are none.
@@ -134,18 +132,17 @@ def json_last(request, environment, username, count):
     Possible errortype values:
      * 'NoSuchUser'
     """
-    s = model.Session()
     try:
         u = get_user_obj(username, s)
     except Exception, e:
         return json.dumps({'success': False, 'errortype': 'NoSuchUser'})
 
-    posts = s.query(post).filter(post.owner == u).order_by(desc(post.timestamp)).limit(int(count)).all() 
+    posts = session.query(post).filter(post.owner == u).order_by(desc(post.timestamp)).limit(int(count)).all() 
     dicts = [ x.to_serializable_dict() for x in posts ]
     return json.dumps(dicts, encoding="utf-8")
 
 
-def json_user_info(request, environment, username):
+def json_user_info(request, environment, session, username):
     """
     retunrns a json representation of some of <username>'s user data.
     if an error occurs, a json representation of the standard error handling is returned.
@@ -154,7 +151,6 @@ def json_user_info(request, environment, username):
      * 'NoSuchUser' if the <username> is unknown to the system.
 
     """
-    session = model.Session()
     try:
         user = get_user_obj(username, session)
     except Exception, e:
@@ -164,7 +160,7 @@ def json_user_info(request, environment, username):
     return json.dumps(userdict, encoding="utf-8")
 
 
-def web_view_user_posts(request, environment, username, page=1, posts_per_page=30):
+def web_view_user_posts(request, environment, session, username, page=1, posts_per_page=30):
     """
     returns the <page> <posts_per_page> posts created by <username> as 'posts', <username>'s 
     user object as 'user', an empty array if there aren't any.
@@ -176,17 +172,16 @@ def web_view_user_posts(request, environment, username, page=1, posts_per_page=3
     * Exception('NoSuchUser')
     """
 
-    session = model.Session()
     u = get_user_obj(username, session)
 
     origin = Configuration().base_url+u.name
-    query = model.Session().query(post).filter(post.owner == u).filter(post.origin == origin).offset((int(page)-1)*posts_per_page).limit(posts_per_page)
+    query = session.query(post).filter(post.owner == u).filter(post.origin == origin).offset((int(page)-1)*posts_per_page).limit(posts_per_page)
     posts = [p.downcast() for p in query.all()]
     
     return {'success': True, 'posts': posts, 'user': u} 
 
 @authorized
-def web_view_stream(request, environment, username, page=1, posts_per_page=30):
+def web_view_stream(request, environment, session, username, page=1, posts_per_page=30):
     """
     returns the <page> <posts_per_page> posts created by <username> as 'posts', <username>'s 
     user object as 'user', an empty array if there aren't any.
@@ -202,8 +197,6 @@ def web_view_stream(request, environment, username, page=1, posts_per_page=30):
     if page < 0 or posts_per_page < 0:
         raise Exception('InputMakesNoSense') 
 
-    session = model.Session()
-
     # may raise Exception('NoSuchUser')
     u = get_user_obj(username, session)
     
@@ -212,7 +205,7 @@ def web_view_stream(request, environment, username, page=1, posts_per_page=30):
     return {'success': True, 'posts': posts, 'user': u}
 
 @authorized
-def web_view_stream_tag(request, environment, username, tagstr, page=1, posts_per_page=1):
+def web_view_stream_tag(request, environment, session, username, tagstr, page=1, posts_per_page=1):
     """
     returns the <page> <posts_per_page> posts owned by <username> and tagged with <tagstr> as 'posts' and the <username>'s 
     user object as 'user'
@@ -227,7 +220,6 @@ def web_view_stream_tag(request, environment, username, tagstr, page=1, posts_pe
      * Exception('TagNotFound')
     """
     
-    session = model.Session()
     u = get_user_obj(username, session)
 
     #identify tag
@@ -241,7 +233,7 @@ def web_view_stream_tag(request, environment, username, tagstr, page=1, posts_pe
     return {'posts': posts, 'tag': tag_found, 'show_tags': True, 'user': u}
 
 @authorized
-def web_insert_post(request, environment, username):
+def web_insert_post(request, environment, session, username):
     """
     Saves a post to <username>'s wurstgulasch.
 
@@ -250,7 +242,6 @@ def web_insert_post(request, environment, username):
     May raise the following Exceptions:
      * 
     """ 
-    session = model.Session()
     u = get_user_obj(username, session)
     if request.method == "POST":
         # find out content type
@@ -332,7 +323,7 @@ def web_insert_post(request, environment, username):
         return {} 
 
 
-def web_view_post_detail(request, environment, username, postid):
+def web_view_post_detail(request, environment, session, username, postid):
     """
     Saves a post to <username>'s wurstgulasch.
 
@@ -341,16 +332,15 @@ def web_view_post_detail(request, environment, username, postid):
     May raise the following Exceptions:
      * 
     """
-    s = model.Session()
-    u = get_user_obj(username, s)
+    u = get_user_obj(username, session)
     
-    p = s.query(model.post).filter(post.post_id == int(postid)).all()[0]
+    p = session.query(model.post).filter(post.post_id == int(postid)).all()[0]
 
     return {'post': p, 'user': u, 'show_tags': True}
 
 
 @authorized
-def web_view_friends(request, environment, username):
+def web_view_friends(request, environment, session, username):
     """
     Saves a post to <username>'s wurstgulasch.
 
@@ -359,7 +349,6 @@ def web_view_friends(request, environment, username):
     May raise the following Exceptions:
      * 
     """ 
-    session = model.Session()
     u = get_user_obj(username, session)
 
     friends = session.query(model.friend).filter(model.friend.owner == u).all()
@@ -367,7 +356,7 @@ def web_view_friends(request, environment, username):
     return {'friends': friends}
 
 @authorized
-def web_add_friends(request, environment, username):
+def web_add_friends(request, environment, session, username):
     """
     Saves a post to <username>'s wurstgulasch.
 
@@ -376,7 +365,6 @@ def web_add_friends(request, environment, username):
     May raise the following Exceptions:
      * 
     """
-    session = model.Session()
 
     u = get_user_obj(username, session)
     
@@ -394,7 +382,7 @@ def web_add_friends(request, environment, username):
     else:
         return {}
 
-def web_view_profile(request, environment, username):
+def web_view_profile(request, environment, session, username):
     """
     Saves a post to <username>'s wurstgulasch.
 
@@ -403,13 +391,12 @@ def web_view_profile(request, environment, username):
     May raise the following Exceptions:
      * 
     """
-    s = model.Session()
-    u = get_user_obj(username, s)
+    u = get_user_obj(username, session)
 
     return {'user': u}
 
 @authorized
-def web_change_profile(request, environment, username):
+def web_change_profile(request, environment, session, username):
     """
     makes changes to <username>'s user object
 
@@ -418,8 +405,7 @@ def web_change_profile(request, environment, username):
     May raise the following Exceptions:
      * 
     """
-    s = model.Session()
-    u = get_user_obj(username, s)
+    u = get_user_obj(username, session)
 
     if request.method == 'POST':
         # TODO: strip HTML
@@ -454,14 +440,14 @@ def web_change_profile(request, environment, username):
         if request.form['password'] == request.form['password2'] and request.form['password'] != '':
             u.passwordhash = request.form['password']
         
-        s.commit()
+        session.commit()
         return {'success': True, 'user': u}
     
     else:
         return {'user': u}
 
 @admin
-def admin_view_users(request, environment):
+def admin_view_users(request, environment, session):
     """
     returns all user objects known to the system.
 
@@ -470,14 +456,13 @@ def admin_view_users(request, environment):
     May raise the following Exceptions:
      * 
     """
-    s = model.Session()
 
-    users = s.query(model.user).all()
+    users = session.query(model.user).all()
 
     return {'users' : users}
 
 @admin
-def admin_create_user(request, environment):
+def admin_create_user(request, environment, session):
     """
     creates a new user and adds it to the database.
 
@@ -486,16 +471,15 @@ def admin_create_user(request, environment):
     May raise the following Exceptions:
      * 
     """
-    s = model.Session()
     
     if request.method == 'POST':
         username = request.form['username'].strip() #remove leading/trailing whitespaces
         password = request.form['password']
         if username != "" and password != "":
             u = model.user(name = username, passwordhash = password) #TODO: hash password
-            s.add(u)
+            session.add(u)
             try:
-                s.commit()
+                session.commit()
             except IntegrityError, e:
                 return {'success': False}
             return {'success': True}    
@@ -505,7 +489,7 @@ def admin_create_user(request, environment):
         return {}
 
 @admin
-def admin_reset_password(request, environment, username):
+def admin_reset_password(request, environment, session, username):
     """
     resets  <username>'s password
 
@@ -514,9 +498,8 @@ def admin_reset_password(request, environment, username):
     May raise the following Exceptions:
      * 
     """
-    s = model.Session()
     try:
-        u = get_user_obj(username, s)
+        u = get_user_obj(username, session)
     except NoResultFound, e:
         raise Exception("User " + username + " does not exist")
 
@@ -525,13 +508,13 @@ def admin_reset_password(request, environment, username):
         if password == "":
             return {'success' : False, 'user' : u}
         u.passwordhash = password
-        s.commit()
+        session.commit()
         return {'success' : True, 'user' : u}
     else:
         return {'success' : False, 'user' : u}
 
 @admin  
-def admin_delete_user(request, environment, username):
+def admin_delete_user(request, environment, session, username):
     """
     deletes <username>'s user object from the database
 
@@ -544,26 +527,25 @@ def admin_delete_user(request, environment, username):
     if username == 'admin':
         return {'success': False}
 
-    s = model.Session()
     try:
-        user == get_user_obj(username, s)
+        user = get_user_obj(username, session)
     except NoResultFound, e:
         return {'success' : False}
     # delete all posts by user
-    posts = s.query(model.post).filter(model.post.owner == user).all()
+    posts = session.query(model.post).filter(model.post.owner == user).all()
     for post in posts:
-        s.delete(post)
+        session.delete(post)
     # delete friends
     for friend in user.friends:
-        s.delete(friend)
-    s.delete(user)
-    s.commit()
+        session.delete(friend)
+    session.delete(user)
+    session.commit()
 
     return{'success' : True}
 
 
 
-def default(request, environment):
+def default(request, environment, session):
     """
     returns an empty dictionary.
 
