@@ -5,6 +5,8 @@ from PIL import Image
 
 from config import Configuration
 
+from werkzeug.wrappers import Response
+
 """
 Checks whether the given mimetype is supported
 """
@@ -41,3 +43,26 @@ def force_quadratic(image):
         box = (delta, 0, size+delta, size)
     image = image.crop(box)
     return image
+
+def get_username(environment):
+    """
+    gets username from Beaker session in Werkzeug environment. If username is
+    not set (which should not be the case, btw!) it returns "guest".
+    """
+    beaker_session  = environment['beaker.session']
+    if 'username' in beaker_session.keys():
+        return beaker_session['username']
+    else:
+        return "guest"
+
+def render_template(template_name, werkzeug_env, mimetype="text/html",  **kwargs):
+    """
+    renders **kwargs down to the "template_name" in context of 
+        werkzeug_env and returns a Werkzeug Response Object
+        with the mimetype mime_type which defaults to "text/html"
+    """
+    jinja_environment = werkzeug_env['jinja_env']
+    template = jinja_environment.get_template(template_name)
+    username = get_username(werkzeug_env)
+    response = Response(template.render(username=username, **kwargs), content_type=mimetype)
+    return response

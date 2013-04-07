@@ -17,10 +17,13 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 
 import util
+from util import render_template
 import model
 from model import tag, post, image_post, friend, user
 from config import Configuration
 
+from wtforms import Form, BooleanField, TextField, PasswordField, TextAreaField, validators
+from wtfrecaptcha.fields import RecaptchaField
 
 def authorized(function):
     """
@@ -80,7 +83,7 @@ def web_logout(request, environment, session):
     """
     session = environment['beaker.session']
     session.delete()
-    return {}
+    return redirect('/') 
 
 def web_login(request, environment, session):
     """
@@ -89,21 +92,28 @@ def web_login(request, environment, session):
     Possible errortype values:
      * 'LoginInvalid' if the the login was not successful.
     """
-    if request.method == "POST":
-        try:
-            user_obj = session.query(user).filter(user.name == request.form['username']).one()
-            if user_obj and user_obj.passwordhash == request.form['password']:
-                web_sess = environment['beaker.session']
-                web_sess['username'] = user_obj.name
-                web_sess.save()
-                return {'success': True}
-            else:
-                return {'success': False, 'errortype': 'LoginInvalid'}
-        except sqlalchemy.orm.exc.NoResultFound:
-            return {'success': False, 'errortype': 'LoginInvalid'}
-    else:
-        return {'success': False}
+    class LoginForm(Form):
+        username = TextField('username', [validators.Required()])
+        password = PasswordField('password', [validators.Required()])
 
+    if request.method == "POST":
+        form = LoginForm(request.form)
+        if form.validate():
+            try:
+                user_obj = get_user_obj(form.username.data, session)
+            except Exception, e:
+                return render_template("web_login.htmljinja", environment, form=form, error="Error: Username and password do not match!")
+            #TODO hash
+            if user_obj.passwordhash == form.password.data:
+                http_session = environment['beaker.session']
+                http_session['username'] = user_obj.name
+                http_session.save()
+                return redirect('/')
+        else:
+            return render_template("web_login.htmljinja", environment, form=form)
+    else:
+        form = LoginForm()
+        return render_template("web_login.htmljinja", environment, form=form)
 
 def json_since(request, environment, session, username, timestamp):
     """
@@ -117,11 +127,11 @@ def json_since(request, environment, session, username, timestamp):
     try:
         u = get_user_obj(username, s)
     except Exception, e:
-        return json.dumps({'success': False, 'errortype': 'NoSuchUser'})
+        return Response(json.dumps({'success': False, 'errortype': 'NoSuchUser'}), content_type="text/json")
 
     posts = session.query(post).filter(post.owner == u).filter(post.timestamp >= int(timestamp)).all() 
     dicts = [ x.to_serializable_dict() for x in posts ]
-    return json.dumps(dicts, encoding="utf-8")
+    return Response(json.dumps(dicts, encoding="utf-8"), content_type="text/json")
 
 def json_last(request, environment, session, username, count):
     """
@@ -135,11 +145,11 @@ def json_last(request, environment, session, username, count):
     try:
         u = get_user_obj(username, s)
     except Exception, e:
-        return json.dumps({'success': False, 'errortype': 'NoSuchUser'})
+        return Response(json.dumps({'success': False, 'errortype': 'NoSuchUser'}), content_type="text/json")
 
     posts = session.query(post).filter(post.owner == u).order_by(desc(post.timestamp)).limit(int(count)).all() 
     dicts = [ x.to_serializable_dict() for x in posts ]
-    return json.dumps(dicts, encoding="utf-8")
+    return Response(json.dumps(dicts, encoding="utf-8"), content_type="text/json")
 
 
 def json_user_info(request, environment, session, username):
@@ -154,10 +164,10 @@ def json_user_info(request, environment, session, username):
     try:
         user = get_user_obj(username, session)
     except Exception, e:
-        return  json.dumps({'success': False, 'errortype': 'NoSuchUser'})
+        return  Response(json.dumps({'success': False, 'errortype': 'NoSuchUser'}), content_type="text/json")
     
     userdict = user.to_serializable_dict()
-    return json.dumps(userdict, encoding="utf-8")
+    return Response(json.dumps(userdict, encoding="utf-8"), content_type="text/json")
 
 
 def web_view_user_posts(request, environment, session, username, page=1, posts_per_page=30):
@@ -177,8 +187,7 @@ def web_view_user_posts(request, environment, session, username, page=1, posts_p
     origin = Configuration().base_url+u.name
     query = session.query(post).filter(post.owner == u).filter(post.origin == origin).offset((int(page)-1)*posts_per_page).limit(posts_per_page)
     posts = [p.downcast() for p in query.all()]
-    
-    return {'success': True, 'posts': posts, 'user': u} 
+    return render_template("web_view_user_posts.htmljinja", environment, posts=posts, user=u) 
 
 @authorized
 def web_view_stream(request, environment, session, username, page=1, posts_per_page=30):
@@ -202,7 +211,7 @@ def web_view_stream(request, environment, session, username, page=1, posts_per_p
     
     posts = session.query(post).filter(post.owner == u).offset((int(page)-1)*posts_per_page).limit(posts_per_page)
 
-    return {'success': True, 'posts': posts, 'user': u}
+    return render_template("web_view_stream.htmljinja", environment, posts=posts, user=u) 
 
 @authorized
 def web_view_stream_tag(request, environment, session, username, tagstr, page=1, posts_per_page=1):
@@ -229,8 +238,7 @@ def web_view_stream_tag(request, environment, session, username, tagstr, page=1,
         posts = tag_found.posts
     else:
         raise Exception("TagNotFound")
-
-    return {'posts': posts, 'tag': tag_found, 'show_tags': True, 'user': u}
+    return render_template("web_view_stream_tag.htmljinja", environment, posts=posts, tag=tag_found, show_tags=True, user=u)
 
 @authorized
 def web_insert_post(request, environment, session, username):
@@ -311,7 +319,7 @@ def web_insert_post(request, environment, session, username):
             session.add(tmp)
             session.commit()
  
-            return {}           
+            return render_template("web_insert_post.htmljinja", environment)
   
         elif content_type == "video":
             pass
@@ -320,8 +328,7 @@ def web_insert_post(request, environment, session, username):
             raise Exception("Unknown Content type!")
              
     else:
-        return {} 
-
+        return render_template("web_insert_post.htmljinja", environment)
 
 def web_view_post_detail(request, environment, session, username, postid):
     """
@@ -335,9 +342,7 @@ def web_view_post_detail(request, environment, session, username, postid):
     u = get_user_obj(username, session)
     
     p = session.query(model.post).filter(post.post_id == int(postid)).all()[0]
-
-    return {'post': p, 'user': u, 'show_tags': True}
-
+    return render_template("web_view_post_detail.htmljinja", environment, post=p, user=u, show_tags=True)
 
 @authorized
 def web_view_friends(request, environment, session, username):
@@ -352,8 +357,7 @@ def web_view_friends(request, environment, session, username):
     u = get_user_obj(username, session)
 
     friends = session.query(model.friend).filter(model.friend.owner == u).all()
-
-    return {'friends': friends}
+    return render_template("web_view_friends.htmljinja", environment, friends=friends)
 
 @authorized
 def web_add_friends(request, environment, session, username):
@@ -378,9 +382,9 @@ def web_add_friends(request, environment, session, username):
             
             session.add(tmp)
             session.commit()
-            return {}
+            return redirect('/'+u.name+'/friends')
     else:
-        return {}
+        return render_template("web_add_friends.htmljinja", environment) 
 
 def web_view_profile(request, environment, session, username):
     """
@@ -392,8 +396,7 @@ def web_view_profile(request, environment, session, username):
      * 
     """
     u = get_user_obj(username, session)
-
-    return {'user': u}
+    return render_template("web_view_profile.htmljinja", environment, user=u)
 
 @authorized
 def web_change_profile(request, environment, session, username):
@@ -441,11 +444,10 @@ def web_change_profile(request, environment, session, username):
             u.passwordhash = request.form['password']
         
         session.commit()
-        return {'success': True, 'user': u}
+        return render_template("web_change_profile.htmljinja", environment, success=True, user=u)
     
     else:
-        return {'user': u}
-
+        return render_template("web_change_profile.htmljinja", environment, user=u)
 @admin
 def admin_view_users(request, environment, session):
     """
@@ -459,7 +461,7 @@ def admin_view_users(request, environment, session):
 
     users = session.query(model.user).all()
 
-    return {'users' : users}
+    return render_template("admin_view_users.htmljinja", environment, users=users)
 
 @admin
 def admin_create_user(request, environment, session):
@@ -481,12 +483,13 @@ def admin_create_user(request, environment, session):
             try:
                 session.commit()
             except IntegrityError, e:
-                return {'success': False}
-            return {'success': True}    
+                return render_template("admin_create_user.htmljinja", environment, success=False)
+            
+            return render_template("admin_create_user.htmljinja", environment, success=True)
         else:
-            return {'success' : False}
+            return render_template("admin_create_user.htmljinja", environment, success=False)
     else:
-        return {}
+        return render_template("admin_create_user.htmljinja", environment)
 
 @admin
 def admin_reset_password(request, environment, session, username):
@@ -506,12 +509,12 @@ def admin_reset_password(request, environment, session, username):
     if request.method == 'POST':
         password = request.form['password']
         if password == "":
-            return {'success' : False, 'user' : u}
+            return render_template("admin_reset_password.htmljinja", environment, success=False, user=u)
         u.passwordhash = password
         session.commit()
-        return {'success' : True, 'user' : u}
+        return render_template("admin_reset_password.htmljinja", environment, success=True, user=u)
     else:
-        return {'success' : False, 'user' : u}
+        return render_template("admin_reset_password.htmljinja", environment, success=False, user=u)
 
 @admin  
 def admin_delete_user(request, environment, session, username):
@@ -525,12 +528,12 @@ def admin_delete_user(request, environment, session, username):
     """
     # don't delete admin user
     if username == 'admin':
-        return {'success': False}
+        return render_template("admin_delete_user.htmljinja", environment, success=False)
 
     try:
         user = get_user_obj(username, session)
     except NoResultFound, e:
-        return {'success' : False}
+        return render_template("admin_delete_user.htmljinja", environment, success=False)
     # delete all posts by user
     posts = session.query(model.post).filter(model.post.owner == user).all()
     for post in posts:
@@ -541,9 +544,7 @@ def admin_delete_user(request, environment, session, username):
     session.delete(user)
     session.commit()
 
-    return{'success' : True}
-
-
+    return render_template("admin_delete_user.htmljinja", environment, success=True)
 
 def default(request, environment, session):
     """
@@ -554,4 +555,4 @@ def default(request, environment, session):
     May raise the following Exceptions:
      * 
     """
-    return {}
+    return render_template("default.htmljinja", environment)

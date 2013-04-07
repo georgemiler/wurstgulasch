@@ -1,0 +1,19 @@
+<span color="red">{{ error }}</span>
+
+<form action="{{action}}" method="POST">
+    {% for field in form %}
+        <label>
+            {{ field.label }}
+            {% if field.errors %}
+            <span style="color: red">(Fehler:
+                {% for error in field.errors %}
+                    {{error}}
+                {% endfor %}
+            )</span>
+            {% endif %}
+            {% if field.type != 'BooleanField'%}<br>{% endif %}
+            </label>
+            {{ field() }}<br>
+    {% endfor %}
+    <input type="submit">
+</form>

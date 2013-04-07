@@ -128,22 +128,17 @@ class Wurstgulasch:
         adapter = self.url_map.bind_to_environ(request.environ)
         endpoint, values = adapter.match()
         
-        # create sqlalchemy session
+        # create sqlalchemy session and bind to environment
         db_session = self.session_factory()
+        environment['db_session'] = db_session
+
+        # bind jinja_env to werkzeug environment
+        environment['jinja_env'] = self.jinja_env
 
         view = getattr(views, endpoint)
         result = view(request, environment, db_session, **values)
-        if endpoint.startswith("json_"):
-            out = Response(result, mimetype='text/json')
-        else:
-            # determine username
-            try:
-                username = session['username']
-            except KeyError, e:
-                username = "guest"
-            out = Response(self.render_template(template_name=endpoint+'.htmljinja', username=username, **result), mimetype='text/html')
-     
-        return out
+        
+        return result
 
 
     def handle_request(self, environment, start_response):
