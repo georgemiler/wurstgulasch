@@ -36,14 +36,11 @@ def authorized(function):
         except KeyError, e:
             raise Exception('NoUsernamePassed')
         
-        try:
-            if environment['beaker.session']['username'] == username:
-                return function(*args, **kwargs)
-            else:
-                raise Exception("InsufficientPrivileges")
-        except KeyError, e:
-            raise Exception("InsufficientPrivileges")
-    
+        if environment['beaker.session']['username'] == username:
+             return function(*args, **kwargs)
+        else:
+             raise Exception("InsufficientPrivileges")
+
     return inner
 
 def admin(function):
@@ -369,12 +366,16 @@ def web_add_friends(request, environment, session, username):
     May raise the following Exceptions:
      * 
     """
-
+    class AddFriendForm(Form):
+        handle = TextField("FriendHandle", [validators.Required()]) 
+         
     u = get_user_obj(username, session)
     
     if request.method == "POST":
-        if request.form['url'] != "" and request.form['screenname'] != "":
-            tmp = friend(screenname=request.form['screenname'], url=request.form['url'], lastupdated=0)
+        form = AddFriendForm(request.form) 
+        if form.validate():
+            screenname, url = form.handle.data.split('@')
+            tmp = friend(screenname=screenname, url=url, lastupdated=0)
             
             # add owner
             # TODO replace by proper code once user and session handling is in place
@@ -384,7 +385,17 @@ def web_add_friends(request, environment, session, username):
             session.commit()
             return redirect('/'+u.name+'/friends')
     else:
-        return render_template("web_add_friends.htmljinja", environment) 
+        form = AddFriendForm()
+        return render_template("web_add_friends.htmljinja", environment, form=form) 
+
+@authorized
+def web_delete_friend(request, environment, session, username, friendid):
+    user_obj = get_user_obj(username, session)
+    friend_obj = session.query(friend).filter(friend.id == friendid).one()
+    if friend_obj in user_obj.friends:
+        session.delete(friend_obj)
+        session.commit()
+    return redirect('/'+username+'/friends') 
 
 def web_view_profile(request, environment, session, username):
     """
@@ -473,23 +484,28 @@ def admin_create_user(request, environment, session):
     May raise the following Exceptions:
      * 
     """
-    
+    class CreateUserForm(Form):
+        username = TextField('Username', [validators.Required()])
+        password = TextField('Password', [validators.Required()])    
+
     if request.method == 'POST':
-        username = request.form['username'].strip() #remove leading/trailing whitespaces
-        password = request.form['password']
-        if username != "" and password != "":
+        form = CreateUserForm(request.form)
+        if form.validate():
+            username = form.username.data.strip()
+            password = form.password.data
             u = model.user(name = username, passwordhash = password) #TODO: hash password
             session.add(u)
             try:
                 session.commit()
             except IntegrityError, e:
-                return render_template("admin_create_user.htmljinja", environment, success=False)
+                return render_template("admin_create_user.htmljinja", environment, success=False, form=form)
             
-            return render_template("admin_create_user.htmljinja", environment, success=True)
+            return redirect('/admin/users/view')
         else:
-            return render_template("admin_create_user.htmljinja", environment, success=False)
+            return render_template("admin_create_user.htmljinja", environment, success=False, form=form)
     else:
-        return render_template("admin_create_user.htmljinja", environment)
+        form = CreateUserForm()
+        return render_template("admin_create_user.htmljinja", environment, form=form)
 
 @admin
 def admin_reset_password(request, environment, session, username):
@@ -501,20 +517,20 @@ def admin_reset_password(request, environment, session, username):
     May raise the following Exceptions:
      * 
     """
-    try:
-        u = get_user_obj(username, session)
-    except NoResultFound, e:
-        raise Exception("User " + username + " does not exist")
+    class ResetPasswordForm(Form):
+        password = TextField("password", [validators.Required()])
+    
+    u = get_user_obj(username, session)
 
     if request.method == 'POST':
-        password = request.form['password']
-        if password == "":
-            return render_template("admin_reset_password.htmljinja", environment, success=False, user=u)
-        u.passwordhash = password
-        session.commit()
-        return render_template("admin_reset_password.htmljinja", environment, success=True, user=u)
+        form = ResetPasswordForm(request.form)
+        if form.validate():
+            u.passwordhash = form.password.data
+            session.commit()
+            return redirect('/admin/users/view')
     else:
-        return render_template("admin_reset_password.htmljinja", environment, success=False, user=u)
+        form = ResetPasswordForm()
+        return render_template("admin_reset_password.htmljinja", environment, success=False, user=u, form=form)
 
 @admin  
 def admin_delete_user(request, environment, session, username):
@@ -523,7 +539,7 @@ def admin_delete_user(request, environment, session, username):
 
     Possible errortypes are:
      * 
-    May raise the following Exceptions:
+    1May raise the following Exceptions:
      * 
     """
     # don't delete admin user
@@ -544,7 +560,7 @@ def admin_delete_user(request, environment, session, username):
     session.delete(user)
     session.commit()
 
-    return render_template("admin_delete_user.htmljinja", environment, success=True)
+    return redirect('/admin/users/view')
 
 def default(request, environment, session):
     """

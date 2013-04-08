@@ -3,7 +3,7 @@
 <ul>
 {% for friend in friends %}
 <li>
-<a href="{{friend.url}}">{{friend.screenname}}</a> lastupdated:{{friend.lastupdated}}
+<a href="{{friend.url}}">{{friend.screenname}}</a> <a href="friends/delete/{{friend.id}}">[delete]</a> 
 </li>
 {%endfor%}
 </ul>

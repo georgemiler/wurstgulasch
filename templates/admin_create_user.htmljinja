@@ -1,15 +1,6 @@
 {% extends "web_general.html" %}
 {% block content %}
 <h1>Create User</h1>
-<form action="" method="POST">
-<table>
-	<tr><td>Username</td><td><input type="text" name="username"></td></tr>
-	<tr><td>Password</td><td><input type="password" name="password"></td></tr>
-	<tr><td colspan="2"><input type="submit"></td></tr>
-</table>
-{% if success %}
-	<span style="color: green">User has been added successfully</span><br>
-{% endif %}
-
+{% include "inc_form.htmljinja" %}
 </form>
 {% endblock %}

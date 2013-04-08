@@ -53,7 +53,7 @@ class Wurstgulasch:
             ( '/<username>/stream/page/<page>', 'web_view_stream', 'user' ),
             ( '/<username>/friends', 'web_view_friends', 'user' ),
             ( '/<username>/friends/add', 'web_add_friends', 'user' ),
-            ( '/<username>/friends/delete', 'web_delete_friends', 'user' ),
+            ( '/<username>/friends/delete/<int:friendid>', 'web_delete_friend', 'user' ),
             ( '/<username>/profile', 'web_view_profile', 'all' ),
             ( '/<username>/profile/change', 'web_change_profile', 'user' ),
 			# admin stuff
