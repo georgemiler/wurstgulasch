@@ -22,7 +22,7 @@ import model
 from model import tag, post, friend, user
 from config import Configuration
 
-from wtforms import Form, BooleanField, TextField, PasswordField, TextAreaField, validators
+from wtforms import Form, BooleanField, TextField, FileField, PasswordField, TextAreaField, validators
 
 def authorized(function):
     """
@@ -455,12 +455,20 @@ def web_change_profile(request, environment, session, username):
     May raise the following Exceptions:
      * 
     """
+    class changeProfileForm(Form):
+        tagline = TextField("Tagline")
+        bio = TextAreaField("Something about yourself")
+        avatar = FileField("Your Avatar")
+        password = PasswordField("New Password (leave empty if you don't want to change it")
+        password_confirm = PasswordField("Confirm new password")
+
     u = get_user_obj(username, session)
 
     if request.method == 'POST':
+        form = changeProfileForm(request.form)
         # TODO: strip HTML
-        u.tagline = request.form['tagline']
-        u.bio = request.form['bio']
+        u.tagline = form.tagline.data
+        u.bio = form.bio.data
 
         # avatar
         uploaded = request.files.get('avatar')
@@ -487,14 +495,17 @@ def web_change_profile(request, environment, session, username):
                 u.avatar_small_url = Configuration().base_url+'assets/thumb_'+filename
 
         # TODO: use hash
-        if request.form['password'] == request.form['password2'] and request.form['password'] != '':
-            u.passwordhash = request.form['password']
+        if form.password.data != "" and form.password.data == form.password_confirm.data:
+            u.passwordhash = form.password.data
         
         session.commit()
         return render_template("web_change_profile.htmljinja", environment, success=True, user=u)
     
-    else:
-        return render_template("web_change_profile.htmljinja", environment, user=u)
+    else: 
+        form = changeProfileForm()
+        form.bio.data = u.bio
+        form.tagline.data = u.tagline
+        return render_template("web_change_profile.htmljinja", environment, user=u, form=form)
 @admin
 def admin_view_users(request, environment, session):
     """
