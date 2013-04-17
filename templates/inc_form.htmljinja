@@ -1,6 +1,6 @@
 <span color="red">{{ error }}</span>
 
-<form action="{{action}}" method="POST">
+<form action="{{action}}" method="POST" enctype="multipart/form-data">
     {% for field in form %}
         <label>
             {{ field.label }}

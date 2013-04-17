@@ -1,0 +1,14 @@
+{% extends "web_general.html" %}
+
+{% block content %}
+<h4>Available Plugins</h4>
+
+<ul>
+{% for plugin in pluginlist %}
+
+<li><a href="add/{{plugin}}">{{plugin}}</a>
+
+{% endfor %}
+<ul>
+
+{% endblock %}

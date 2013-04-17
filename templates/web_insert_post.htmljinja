@@ -1,14 +1,5 @@
 {% extends "web_general.html" %}
 {% block content %}
 <h1>Insert Post</h1>
-<form method="POST" action="" enctype="multipart/form-data">
-    Content-Type: <select name="content_type">
-        <option value="image">Image</option>
-    </select><br>
-    Content-String: <input type="text" name="content_string"><br>
-    OR File: <input type="file" name="file"><br>
-    Source: <input type="text" name="source"><br>
-    Description: <input type="text" name="description"><br>
-    Tags (Comma separated): <input type="text" name="tags"> <br>
-    <input type="submit"></form>
+{% include "inc_form.htmljinja" %}
 {% endblock %}

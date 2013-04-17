@@ -9,9 +9,11 @@ from sqlalchemy import create_engine
 
 from jinja2 import Environment, FileSystemLoader
 
+import sys
 import os
 import time
 import json
+
 
 # debug
 # import pdb
@@ -40,10 +42,10 @@ class Wurstgulasch:
             # user specific
             ( '/<username>', 'web_view_user_posts', 'all'),
             ( '/<username>/add', 'web_insert_post', 'all'),
+            ( '/<username>/add/<plugin_str>', 'web_insert_post', 'user' ),
             ( '/<username>/page/<page>', 'web_view_user_posts', 'all'),
             ( '/<username>/json/since/<timestamp>', 'json_since', 'all'),
             ( '/<username>/json/last/<count>', 'json_last', 'all' ),
-            ( '/<username>/create', 'web_insert_post', 'user' ),
             ( '/<username>/json/info', 'json_user_info', 'all' ),
             # posts
             ( '/<username>/post/<postid>', 'web_view_post_detail', 'user' ),
@@ -70,6 +72,16 @@ class Wurstgulasch:
         self.jinja_env = Environment(
             loader=FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates')),
         )
+
+        # load content plugins
+        sys.path.append('./contenttypes')
+        self.content_plugins = {} 
+        filenames = os.listdir('./contenttypes')
+        for filename in filenames:
+            if filename.endswith('.py') and not filename == '__init__.py':
+                plugin_name = filename[0:-3]
+                plugin = __import__(plugin_name)
+                self.content_plugins[plugin_name] = plugin.Plugin
 
     def render_template(self, template_name, **context):
         return self.jinja_env.get_template(template_name).render(context)
@@ -134,6 +146,9 @@ class Wurstgulasch:
 
         # bind jinja_env to werkzeug environment
         environment['jinja_env'] = self.jinja_env
+
+        # bind plugins to werkzeug environment
+        environment['content_plugins'] = self.content_plugins
 
         view = getattr(views, endpoint)
         result = view(request, environment, db_session, **values)

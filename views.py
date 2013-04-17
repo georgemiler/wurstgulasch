@@ -19,11 +19,10 @@ from sqlalchemy.orm.exc import NoResultFound
 import util
 from util import render_template
 import model
-from model import tag, post, image_post, friend, user
+from model import tag, post, friend, user
 from config import Configuration
 
 from wtforms import Form, BooleanField, TextField, PasswordField, TextAreaField, validators
-from wtfrecaptcha.fields import RecaptchaField
 
 def authorized(function):
     """
@@ -238,7 +237,7 @@ def web_view_stream_tag(request, environment, session, username, tagstr, page=1,
     return render_template("web_view_stream_tag.htmljinja", environment, posts=posts, tag=tag_found, show_tags=True, user=u)
 
 @authorized
-def web_insert_post(request, environment, session, username):
+def web_insert_post(request, environment, session, username, plugin_str=None):
     """
     Saves a post to <username>'s wurstgulasch.
 
@@ -247,85 +246,122 @@ def web_insert_post(request, environment, session, username):
     May raise the following Exceptions:
      * 
     """ 
-    u = get_user_obj(username, session)
-    if request.method == "POST":
-        # find out content type
-        try:
-            content_type = request.form['content_type']
-        except Exception,e:
-            raise Exception("No Content Type was passed!")
-
-        # different content types = different methods
-        if content_type == "image":
-            # figure out if source is URL or uploaded file and acquire content + mimetype
-            file_obj = request.files.get('file')
-            if file_obj:
-                mimetype = file_obj.content_type
-            elif request.form['content_string'] != None:
-                # TODO verify URL
-                from urllib import urlopen
-                file_obj = urlopen(request.form['content_string'])
-                mimetype = file_ob.info().gettype()
-            else:
-                raise Exception("No Data given")
-            
-            filetype = util.check_mimetype(mimetype, ["image"], ["jpeg", "png", "gif", "tiff"])
-            # TODO check for exceptions
-            buf_image = file_obj.read();
-            image = Image.open(StringIO(buf_image))
-            thumbnail = util.generate_thumbnail(image, 300)
-
-            assetspath = os.path.join(Configuration().base_path, 'assets')
-            filename = md5(buf_image).hexdigest() + "." + filetype;
-            imagepath = os.path.join(assetspath, filename)
-            thumbnailpath = os.path.join(assetspath, "thumb_" + filename)
-
-            # TODO check for exceptions
-            image.save(imagepath)
-            thumbnail.save(thumbnailpath)
-            
-            image_url = Configuration().base_url+'assets/'+filename          
-            thumb_url = Configuration().base_url+'assets/thumb_'+filename
-                   
-            tmp = image_post(
-                image_url=image_url,
-                thumb_url=thumb_url,
-                source=request.form['source'],
-                tags=[],
-                description=request.form['description'],
-                reference=None,
-                signature=None
-            ) 
-            
-            # add owner and origin
-            tmp.owner = u
-            tmp.origin = Configuration().base_url+u.name
-
-            # add tags
-            tag_strings = [ t.strip() for t in request.form['tags'].split(',') ]
-            for tag_str in tag_strings:
-                if tag_str != '':
-                    res = session.query(tag).filter(tag.tag == tag_str).all()
-                    if res:
-                        tmp.tags.append(res[0])
-                    else:
-                        new_tag = tag(tag_str)
-                        session.add(new_tag)
-                        tmp.tags.append(new_tag)
-            
-            session.add(tmp)
-            session.commit()
- 
-            return render_template("web_insert_post.htmljinja", environment)
-  
-        elif content_type == "video":
-            pass
-        
+    if not request.method == "POST":
+        if plugin_str == None:
+            # list all available plugins
+            pluginlist = environment['content_plugins'].keys()
+            return render_template("web_choose_post_plugin.htmljinja", environment, pluginlist=pluginlist) 
         else:
-            raise Exception("Unknown Content type!")
-             
+            # check if plugin actually exists
+            if plugin_str not in environment['content_plugins'].keys():
+                raise Exception('Content Plugin not found :(') 
+            # show the specific form
+            else:
+                form = environment['content_plugins'][plugin_str].CreatePostForm()
+                return render_template("web_insert_post.htmljinja", environment, form=form)
     else:
-        return render_template("web_insert_post.htmljinja", environment)
+        if not plugin_str == None:
+            # check if plugin actually exists
+            if plugin_str not in environment['content_plugins'].keys():
+                raise Exception('Content Plugin not found :(')
+            # create post object
+            plugin_class = environment['content_plugins'][plugin_str]
+            post_obj = plugin_class.from_request(request)
+
+            # set user and time
+            u = get_user_obj(username, session)
+            post_obj.owner = u
+            post_obj.origin = Configuration().base_url+u.name
+
+            # insert into database
+            session.add(post_obj)
+            session.commit()
+
+            # return to Stream
+            return redirect('/'+username+'/stream')
+        else:
+            # this should not happen
+
+            pass
+    #u = get_user_obj(username, session)
+    #if request.method == "POST":
+        ## find out content type
+        #try:
+            #content_type = request.form['content_type']
+        #except Exception,e:
+            #raise Exception("No Content Type was passed!")
+
+        ## different content types = different methods
+        #if content_type == "image":
+            ## figure out if source is URL or uploaded file and acquire content + mimetype
+            #file_obj = request.files.get('file')
+            #if file_obj:
+                #mimetype = file_obj.content_type
+            #elif request.form['content_string'] != None:
+                ## TODO verify URL
+                #from urllib import urlopen
+                #file_obj = urlopen(request.form['content_string'])
+                #mimetype = file_ob.info().gettype()
+            #else:
+                #raise Exception("No Data given")
+            
+            #filetype = util.check_mimetype(mimetype, ["image"], ["jpeg", "png", "gif", "tiff"])
+            ## TODO check for exceptions
+            #buf_image = file_obj.read();
+            #image = Image.open(StringIO(buf_image))
+            #thumbnail = util.generate_thumbnail(image, 300)
+
+            #assetspath = os.path.join(Configuration().base_path, 'assets')
+            #filename = md5(buf_image).hexdigest() + "." + filetype;
+            #imagepath = os.path.join(assetspath, filename)
+            #thumbnailpath = os.path.join(assetspath, "thumb_" + filename)
+
+            ## TODO check for exceptions
+            #image.save(imagepath)
+            #thumbnail.save(thumbnailpath)
+            
+            #image_url = Configuration().base_url+'assets/'+filename          
+            #thumb_url = Configuration().base_url+'assets/thumb_'+filename
+                   
+            #tmp = image_post(
+                #image_url=image_url,
+                #thumb_url=thumb_url,
+                #source=request.form['source'],
+                #tags=[],
+                #description=request.form['description'],
+                #reference=None,
+                #signature=None
+            #) 
+            
+            ## add owner and origin
+            #tmp.owner = u
+            #tmp.origin = Configuration().base_url+u.name
+
+            ## add tags
+            #tag_strings = [ t.strip() for t in request.form['tags'].split(',') ]
+            #for tag_str in tag_strings:
+                #if tag_str != '':
+                    #res = session.query(tag).filter(tag.tag == tag_str).all()
+                    #if res:
+                        #tmp.tags.append(res[0])
+                    #else:
+                        #new_tag = tag(tag_str)
+                        #session.add(new_tag)
+                        #tmp.tags.append(new_tag)
+            
+            #session.add(tmp)
+            #session.commit()
+ 
+            #return render_template("web_insert_post.htmljinja", environment)
+  
+        #elif content_type == "video":
+            #pass
+        
+        #else:
+            #raise Exception("Unknown Content type!")
+             
+    #else:
+        #return render_template("web_insert_post.htmljinja", environment)
 
 def web_view_post_detail(request, environment, session, username, postid):
     """

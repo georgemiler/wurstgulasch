@@ -115,34 +115,9 @@ class post(Base):
         
         return d
 
+# include plugins
+from contenttypes import *
  
-class image_post(post):
-    __mapper_args__ = {'polymorphic_identity': "image"}
-
-    def __init__(self, image_url, thumb_url, origin=None, post_id=None, timestamp=None, source=None, description=None, reference=None, signature=None, tags=[]):
-        post.__init__(self,
-            post_id=post_id,
-            timestamp=timestamp,
-            origin=origin,
-            content_type="image",
-            content_string=image_url+";"+thumb_url,
-            source=source,
-            description=description,
-            reference=reference,
-            signature=signature,
-            tags=tags
-        )
-        self.image_url = image_url
-        self.thumb_url = thumb_url
-
-    def downcast(self):
-        """
-        wat.
-        """
-        self.image_url = self.content_string.split(';')[0]
-        self.thumb_url = self.content_string.split(';')[1]
-        return self
-    
 class tag(Base):
     __tablename__ = "tag"
 
