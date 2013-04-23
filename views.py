@@ -202,13 +202,12 @@ def web_view_stream(request, environment, session, username, page=1, posts_per_p
      * Exception('InsufficientPrivileges')
     """
 
-    if page < 0 or posts_per_page < 0:
-        raise Exception('InputMakesNoSense')
-
     # may raise Exception('NoSuchUser')
     u = get_user_obj(username, session)
+    i = u.identity
 
-    posts = session.query(post).filter(post.owner == u.identity).offset((int(page)-1)*posts_per_page).limit(posts_per_page)
+    friend_ids = [f.id for f in u.friends]
+    posts = session.query(post).filter(or_(post.owner_id.in_(friend_ids), post.reposters.any_(friend_ids) ))
 
     return render_template("web_view_stream.htmljinja", environment, posts=posts, user=u)
 
