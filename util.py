@@ -1,16 +1,12 @@
-import os
-from hashlib import md5
-
 from PIL import Image
-
-from config import Configuration
 
 from werkzeug.wrappers import Response
 
-"""
-Checks whether the given mimetype is supported
-"""
-def check_mimetype(mimetype, supported_maintypes, supported_subtypes):
+def check_mimetype(mimetype, supported_maintypes,
+        supported_subtypes):
+    """
+    Checks whether the given mimetype is supported
+    """
     mimesplit = mimetype.split('/')
     if mimesplit[0] not in supported_maintypes or mimesplit[1] not in supported_subtypes:
         raise Exception("Unsupported mimetype: " + mimetype + ", expected " + supported_maintypes +
@@ -18,20 +14,20 @@ def check_mimetype(mimetype, supported_maintypes, supported_subtypes):
     return mimesplit[1]
 
 
-"""
-Generates a thumbnail from a given image with the given width.
-The image's aspect ratio will be kept.
-"""
 def generate_thumbnail(image, width):
+    """
+    Generates a thumbnail from a given image with the given width.
+    The image's aspect ratio will be kept.
+    """
     image = image.copy()
     hsize = int(image.size[1] * (width / float(image.size[0])))
     image.thumbnail((width, hsize), Image.ANTIALIAS)
     return image
 
-"""
-Forces quadratic geometry on an image
-"""
 def force_quadratic(image):
+    """
+    Forces quadratic geometry on an image
+    """
     (width, height) = image.size
     if width == height:
         return image
@@ -57,7 +53,7 @@ def get_username(environment):
 
 def render_template(template_name, werkzeug_env, mimetype="text/html",  **kwargs):
     """
-    renders **kwargs down to the "template_name" in context of 
+    renders **kwargs down to the "template_name" in context of
         werkzeug_env and returns a Werkzeug Response Object
         with the mimetype mime_type which defaults to "text/html"
     """

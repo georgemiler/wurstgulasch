@@ -1,8 +1,7 @@
 #!/usr/bin/python2.7
 
-from werkzeug.wrappers import Request, Response
+from werkzeug import Request
 from werkzeug.routing import Map, Rule
-from werkzeug.exceptions import HTTPException
 from werkzeug.wsgi import SharedDataMiddleware
 
 from sqlalchemy import create_engine
@@ -30,6 +29,7 @@ class Wurstgulasch:
     def __init__(self, database_uri):
         # init sqlalchemy
         self.db = create_engine(Configuration().database_uri)
+        self.db.echo = True
         from sqlalchemy.orm import sessionmaker
         self.session_factory = sessionmaker(bind=self.db)
 
@@ -49,12 +49,13 @@ class Wurstgulasch:
             ( '/<username>/json/info', 'json_user_info', 'all' ),
             # posts
             ( '/<username>/post/<postid>', 'web_view_post_detail', 'user' ),
+            ( '/<username>/repost/<int:post_id>', 'json_repost', 'user'),
             ( '/<username>/stream/tag/<tagstr>/page/<page>', 'web_view_stream_tag', 'user' ),
             ( '/<username>/stream', 'web_view_stream', 'user' ),
             ( '/<username>/stream/tag/<tagstr>', 'web_view_stream_tag', 'user' ),
             ( '/<username>/stream/page/<page>', 'web_view_stream', 'user' ),
             ( '/<username>/friends', 'web_view_friends', 'user' ),
-            ( '/<username>/friends/add', 'web_add_friends', 'user' ),
+            ( '/<username>/friends/add', 'web_add_friend', 'user' ),
             ( '/<username>/friends/delete/<int:friendid>', 'web_delete_friend', 'user' ),
             ( '/<username>/profile', 'web_view_profile', 'all' ),
             ( '/<username>/profile/change', 'web_change_profile', 'user' ),
@@ -67,7 +68,7 @@ class Wurstgulasch:
         self.url_map = Map(
             [ Rule(x[0], endpoint=x[1]) for x in self.routes]
         )
-        
+
         # set up templates
         self.jinja_env = Environment(
             loader=FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates')),
@@ -75,7 +76,7 @@ class Wurstgulasch:
 
         # load content plugins
         sys.path.append('./contenttypes')
-        self.content_plugins = {} 
+        self.content_plugins = {}
         filenames = os.listdir('./contenttypes')
         for filename in filenames:
             if filename.endswith('.py') and not filename == '__init__.py':
@@ -85,7 +86,7 @@ class Wurstgulasch:
 
     def render_template(self, template_name, **context):
         return self.jinja_env.get_template(template_name).render(context)
-         
+
     def query_friends(self):
         from urllib import urlopen
         session = model.Session()
@@ -113,9 +114,9 @@ class Wurstgulasch:
                             # reference = p['reference'],
                             # signature = p['signature'],
                         )
-                        
+
                         tmp.owner = user
-        
+
                         # check if tag already exists, if not create it.
                         for t in p['tags']:
                             res = session.query(model.tag).filter(model.tag.tag == t).all()
@@ -125,7 +126,7 @@ class Wurstgulasch:
                                 new_tag = model.tag(t)
                                 session.add(new_tag)
                                 tmp.tags.append(new_tag)
-                                    
+
                         session.add(tmp)
 
                     except KeyError, e:
@@ -139,7 +140,7 @@ class Wurstgulasch:
 
         adapter = self.url_map.bind_to_environ(request.environ)
         endpoint, values = adapter.match()
-        
+
         # create sqlalchemy session and bind to environment
         db_session = self.session_factory()
         environment['db_session'] = db_session
@@ -152,7 +153,7 @@ class Wurstgulasch:
 
         view = getattr(views, endpoint)
         result = view(request, environment, db_session, **values)
-        
+
         return result
 
 
@@ -164,16 +165,14 @@ class Wurstgulasch:
     def init_database(self):
         import model
         model.Base.metadata.create_all(bind=self.db)
-        
+
         from sqlalchemy.orm import sessionmaker
         session = sessionmaker(bind=self.db)()
-        
-        testuser = model.user(name='testuser', passwordhash='testpassword', tagline='I am only here because I need to be.', bio='I often live short and very exciting lives.')
-        adminuser = model.user(name='admin', passwordhash='admin')
-        session.add(testuser)
+        adminuser = model.user('admin', 'admin')
+        #session.add(adminuser.identity)
         session.add(adminuser)
-        session.commit() 
-        
+        session.commit()
+
     def __call__(self, environment, start_response):
         return self.handle_request(environment, start_response)
 
@@ -183,14 +182,14 @@ def create_app(conf_file_location='wurstgulasch.cfg'):
 
     app = Wurstgulasch(database_uri=Configuration().database_uri)
     app.__call__ = SharedDataMiddleware(
-        app.__call__, { 
+        app.__call__, {
             '/assets': './assets',
             '/static': './static'
         }
     )
 
-    #app.__call__ = CacheMiddleware(app.__call__) 
-    app.__call__ = SessionMiddleware(app.__call__, type='dbm', data_dir='./sessions') 
+    #app.__call__ = CacheMiddleware(app.__call__)
+    app.__call__ = SessionMiddleware(app.__call__, type='dbm', data_dir='./sessions')
 
     return app
 
@@ -205,9 +204,9 @@ def shell_init(conf_file_location='wurstgulasch.cfg'):
 if __name__ == "__main__":
     from werkzeug.serving import run_simple
     from werkzeug import script
-   
+
     action_runserver = script.make_runserver(create_app, use_debugger=True, use_reloader=True)
     action_initdb = lambda: create_app().init_database()
     action_shell = script.make_shell(shell_init)
 
-    script.run() 
+    script.run()

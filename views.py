@@ -1,5 +1,6 @@
 import os
 import random
+
 import time
 from hashlib import md5
 import json
@@ -12,14 +13,14 @@ from werkzeug.utils import redirect
 from jinja2 import Environment, FileSystemLoader
 
 import sqlalchemy
-from sqlalchemy import desc
+from sqlalchemy import desc, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 
 import util
 from util import render_template
 import model
-from model import tag, post, friend, user
+from model import tag, post, user, identity
 from config import Configuration
 
 from wtforms import Form, BooleanField, TextField, FileField, PasswordField, TextAreaField, validators
@@ -34,7 +35,7 @@ def authorized(function):
             username = kwargs['username']
         except KeyError, e:
             raise Exception('NoUsernamePassed')
-        
+
         if environment['beaker.session']['username'] == username:
              return function(*args, **kwargs)
         else:
@@ -65,9 +66,9 @@ def get_user_obj(username, session):
     Raises Exception('NoSuchUser') if <username> is not known to the system.
     """
     try:
-        u =session.query(user).filter(user.name == username).one()
+        u = session.query(user).join(identity).filter(identity.username == username).one()
     except Exception, e:
-        raise Exception('NoSuchUser')
+       raise Exception('NoSuchUser')
 
     if not u:
         raise Exception('NoSuchUser')
@@ -79,7 +80,7 @@ def web_logout(request, environment, session):
     """
     session = environment['beaker.session']
     session.delete()
-    return redirect('/') 
+    return redirect('/')
 
 def web_login(request, environment, session):
     """
@@ -102,7 +103,7 @@ def web_login(request, environment, session):
             #TODO hash
             if user_obj.passwordhash == form.password.data:
                 http_session = environment['beaker.session']
-                http_session['username'] = user_obj.name
+                http_session['username'] = user_obj.identity.username
                 http_session.save()
                 return redirect('/')
         else:
@@ -125,13 +126,13 @@ def json_since(request, environment, session, username, timestamp):
     except Exception, e:
         return Response(json.dumps({'success': False, 'errortype': 'NoSuchUser'}), content_type="text/json")
 
-    posts = session.query(post).filter(post.owner == u).filter(post.timestamp >= int(timestamp)).all() 
+    posts = session.query(post).filter(post.owner == u).filter(post.timestamp >= int(timestamp)).all()
     dicts = [ x.to_serializable_dict() for x in posts ]
     return Response(json.dumps(dicts, encoding="utf-8"), content_type="text/json")
 
 def json_last(request, environment, session, username, count):
     """
-    returns json representations of <username>'s last <count> posts, 
+    returns json representations of <username>'s last <count> posts,
     in consequence an empty array if there are none.
     if an error occurs, a json representation of the error handling is returned.
 
@@ -143,7 +144,7 @@ def json_last(request, environment, session, username, count):
     except Exception, e:
         return Response(json.dumps({'success': False, 'errortype': 'NoSuchUser'}), content_type="text/json")
 
-    posts = session.query(post).filter(post.owner == u).order_by(desc(post.timestamp)).limit(int(count)).all() 
+    posts = session.query(post).filter(post.owner == u).order_by(desc(post.timestamp)).limit(int(count)).all()
     dicts = [ x.to_serializable_dict() for x in posts ]
     return Response(json.dumps(dicts, encoding="utf-8"), content_type="text/json")
 
@@ -161,14 +162,14 @@ def json_user_info(request, environment, session, username):
         user = get_user_obj(username, session)
     except Exception, e:
         return  Response(json.dumps({'success': False, 'errortype': 'NoSuchUser'}), content_type="text/json")
-    
+
     userdict = user.to_serializable_dict()
     return Response(json.dumps(userdict, encoding="utf-8"), content_type="text/json")
 
 
 def web_view_user_posts(request, environment, session, username, page=1, posts_per_page=30):
     """
-    returns the <page> <posts_per_page> posts created by <username> as 'posts', <username>'s 
+    returns the <page> <posts_per_page> posts created by <username> as 'posts', <username>'s
     user object as 'user', an empty array if there aren't any.
 
     Possible errortype values are:
@@ -180,15 +181,17 @@ def web_view_user_posts(request, environment, session, username, page=1, posts_p
 
     u = get_user_obj(username, session)
 
-    origin = Configuration().base_url+u.name
-    query = session.query(post).filter(post.owner == u).filter(post.origin == origin).offset((int(page)-1)*posts_per_page).limit(posts_per_page)
-    posts = [p.downcast() for p in query.all()]
-    return render_template("web_view_user_posts.htmljinja", environment, posts=posts, user=u) 
+    own = session.query(post).filter(post.owner==u.identity).all()
+    reposts = session.query(post).filter(post.reposters.contains(u.identity)).all()
+    allposts = own
+    allposts.extend(reposts)
+    posts = [p.downcast() for p in allposts]
+    return render_template("web_view_user_posts.htmljinja", environment, posts=posts, user=u)
 
 @authorized
 def web_view_stream(request, environment, session, username, page=1, posts_per_page=30):
     """
-    returns the <page> <posts_per_page> posts created by <username> as 'posts', <username>'s 
+    returns the <page> <posts_per_page> posts created by <username> as 'posts', <username>'s
     user object as 'user', an empty array if there aren't any.
 
     Possible errortype values are:
@@ -198,25 +201,25 @@ def web_view_stream(request, environment, session, username, page=1, posts_per_p
      * Exception('NoSuchUser')
      * Exception('InsufficientPrivileges')
     """
-    
+
     if page < 0 or posts_per_page < 0:
-        raise Exception('InputMakesNoSense') 
+        raise Exception('InputMakesNoSense')
 
     # may raise Exception('NoSuchUser')
     u = get_user_obj(username, session)
-    
-    posts = session.query(post).filter(post.owner == u).offset((int(page)-1)*posts_per_page).limit(posts_per_page)
 
-    return render_template("web_view_stream.htmljinja", environment, posts=posts, user=u) 
+    posts = session.query(post).filter(post.owner == u.identity).offset((int(page)-1)*posts_per_page).limit(posts_per_page)
+
+    return render_template("web_view_stream.htmljinja", environment, posts=posts, user=u)
 
 @authorized
 def web_view_stream_tag(request, environment, session, username, tagstr, page=1, posts_per_page=1):
     """
-    returns the <page> <posts_per_page> posts owned by <username> and tagged with <tagstr> as 'posts' and the <username>'s 
+    returns the <page> <posts_per_page> posts owned by <username> and tagged with <tagstr> as 'posts' and the <username>'s
     user object as 'user'
 
     Possible errortype values are:
-     * 
+     *
 
     May raise the following Exceptions:
      * Exception('NoSuchUser')
@@ -224,7 +227,7 @@ def web_view_stream_tag(request, environment, session, username, tagstr, page=1,
      * Exception('InputMakesNoSense')
      * Exception('TagNotFound')
     """
-    
+
     u = get_user_obj(username, session)
 
     #identify tag
@@ -242,19 +245,19 @@ def web_insert_post(request, environment, session, username, plugin_str=None):
     Saves a post to <username>'s wurstgulasch.
 
     Possible errortypes are:
-     * 
+     *
     May raise the following Exceptions:
-     * 
-    """ 
+     *
+    """
     if not request.method == "POST":
         if plugin_str == None:
             # list all available plugins
             pluginlist = environment['content_plugins'].keys()
-            return render_template("web_choose_post_plugin.htmljinja", environment, pluginlist=pluginlist) 
+            return render_template("web_choose_post_plugin.htmljinja", environment, pluginlist=pluginlist)
         else:
             # check if plugin actually exists
             if plugin_str not in environment['content_plugins'].keys():
-                raise Exception('Content Plugin not found :(') 
+                raise Exception('Content Plugin not found :(')
             # show the specific form
             else:
                 form = environment['content_plugins'][plugin_str].CreatePostForm()
@@ -270,8 +273,7 @@ def web_insert_post(request, environment, session, username, plugin_str=None):
 
             # set user and time
             u = get_user_obj(username, session)
-            post_obj.owner = u
-            post_obj.origin = Configuration().base_url+u.name
+            post_obj.owner = u.identity
 
             # insert into database
             session.add(post_obj)
@@ -281,100 +283,28 @@ def web_insert_post(request, environment, session, username, plugin_str=None):
             return redirect('/'+username+'/stream')
         else:
             # this should not happen
-
             pass
-    #u = get_user_obj(username, session)
-    #if request.method == "POST":
-        ## find out content type
-        #try:
-            #content_type = request.form['content_type']
-        #except Exception,e:
-            #raise Exception("No Content Type was passed!")
 
-        ## different content types = different methods
-        #if content_type == "image":
-            ## figure out if source is URL or uploaded file and acquire content + mimetype
-            #file_obj = request.files.get('file')
-            #if file_obj:
-                #mimetype = file_obj.content_type
-            #elif request.form['content_string'] != None:
-                ## TODO verify URL
-                #from urllib import urlopen
-                #file_obj = urlopen(request.form['content_string'])
-                #mimetype = file_ob.info().gettype()
-            #else:
-                #raise Exception("No Data given")
-            
-            #filetype = util.check_mimetype(mimetype, ["image"], ["jpeg", "png", "gif", "tiff"])
-            ## TODO check for exceptions
-            #buf_image = file_obj.read();
-            #image = Image.open(StringIO(buf_image))
-            #thumbnail = util.generate_thumbnail(image, 300)
-
-            #assetspath = os.path.join(Configuration().base_path, 'assets')
-            #filename = md5(buf_image).hexdigest() + "." + filetype;
-            #imagepath = os.path.join(assetspath, filename)
-            #thumbnailpath = os.path.join(assetspath, "thumb_" + filename)
-
-            ## TODO check for exceptions
-            #image.save(imagepath)
-            #thumbnail.save(thumbnailpath)
-            
-            #image_url = Configuration().base_url+'assets/'+filename          
-            #thumb_url = Configuration().base_url+'assets/thumb_'+filename
-                   
-            #tmp = image_post(
-                #image_url=image_url,
-                #thumb_url=thumb_url,
-                #source=request.form['source'],
-                #tags=[],
-                #description=request.form['description'],
-                #reference=None,
-                #signature=None
-            #) 
-            
-            ## add owner and origin
-            #tmp.owner = u
-            #tmp.origin = Configuration().base_url+u.name
-
-            ## add tags
-            #tag_strings = [ t.strip() for t in request.form['tags'].split(',') ]
-            #for tag_str in tag_strings:
-                #if tag_str != '':
-                    #res = session.query(tag).filter(tag.tag == tag_str).all()
-                    #if res:
-                        #tmp.tags.append(res[0])
-                    #else:
-                        #new_tag = tag(tag_str)
-                        #session.add(new_tag)
-                        #tmp.tags.append(new_tag)
-            
-            #session.add(tmp)
-            #session.commit()
- 
-            #return render_template("web_insert_post.htmljinja", environment)
-  
-        #elif content_type == "video":
-            #pass
-        
-        #else:
-            #raise Exception("Unknown Content type!")
-             
-    #else:
-        #return render_template("web_insert_post.htmljinja", environment)
+@authorized
+def json_repost(request, environment, session, username, post_id):
+    u = get_user_obj(username, session)
+    p = session.query(model.post).filter(model.post.post_id == post_id).one()
+    p.reposters.append(u.identity)
+    session.commit()
+    return Response('{\'success\'=True}')
 
 def web_view_post_detail(request, environment, session, username, postid):
     """
     Saves a post to <username>'s wurstgulasch.
 
     Possible errortypes are:
-     * 
+     *
     May raise the following Exceptions:
-     * 
+     *
     """
     u = get_user_obj(username, session)
-    
-    p = session.query(model.post).filter(post.post_id == int(postid)).all()[0]
+
+    p = session.query(model.post).filter(post.post_id == int(postid),).all()[0]
     return render_template("web_view_post_detail.htmljinja", environment, post=p, user=u, show_tags=True)
 
 @authorized
@@ -383,64 +313,68 @@ def web_view_friends(request, environment, session, username):
     Saves a post to <username>'s wurstgulasch.
 
     Possible errortypes are:
-     * 
+     *
     May raise the following Exceptions:
-     * 
-    """ 
+     *
+    """
     u = get_user_obj(username, session)
 
-    friends = session.query(model.friend).filter(model.friend.owner == u).all()
+    friends = u.friends
     return render_template("web_view_friends.htmljinja", environment, friends=friends)
 
 @authorized
-def web_add_friends(request, environment, session, username):
+def web_add_friend(request, environment, session, username):
     """
     Saves a post to <username>'s wurstgulasch.
 
     Possible errortypes are:
-     * 
+     *
     May raise the following Exceptions:
-     * 
+     *
     """
     class AddFriendForm(Form):
-        handle = TextField("FriendHandle", [validators.Required()]) 
-         
+        handle = TextField("FriendHandle", [validators.Required()])
+
     u = get_user_obj(username, session)
-    
+
     if request.method == "POST":
-        form = AddFriendForm(request.form) 
+        form = AddFriendForm(request.form)
         if form.validate():
-            screenname, url = form.handle.data.split('@')
-            tmp = friend(screenname=screenname, url=url, lastupdated=0)
-            
-            # add owner
-            # TODO replace by proper code once user and session handling is in place
-            tmp.owner = u
-            
-            session.add(tmp)
+            # check if identity exists
+            name, wurstgulasch = form.handle.data.split("@")
+            if session.query(identity).filter(identity.username == name, identity.wurstgulasch == wurstgulasch).count() != 0:
+                new_friend = session.query(identity).filter(identity.username == name, identity.wurstgulasch == wurstgulasch).one()
+            else:
+                new_friend = identity(name, wurstgulasch=wurstgulasch)
+                session.add(new_friend)
+
+            u.friends.append(new_friend)
             session.commit()
-            return redirect('/'+u.name+'/friends')
+
+            return redirect('/'+username+'/friends')
+
     else:
         form = AddFriendForm()
-        return render_template("web_add_friends.htmljinja", environment, form=form) 
+        return render_template("web_add_friends.htmljinja", environment, form=form)
 
 @authorized
 def web_delete_friend(request, environment, session, username, friendid):
     user_obj = get_user_obj(username, session)
-    friend_obj = session.query(friend).filter(friend.id == friendid).one()
-    if friend_obj in user_obj.friends:
-        session.delete(friend_obj)
-        session.commit()
-    return redirect('/'+username+'/friends') 
+    friend_obj = session.query(identity).filter(identity.id == friendid).one()
+    user_obj.friends.remove(friend_obj)
+
+    session.commit()
+
+    return redirect('/'+username+'/friends')
 
 def web_view_profile(request, environment, session, username):
     """
     Saves a post to <username>'s wurstgulasch.
 
     Possible errortypes are:
-     * 
+     *
     May raise the following Exceptions:
-     * 
+     *
     """
     u = get_user_obj(username, session)
     return render_template("web_view_profile.htmljinja", environment, user=u)
@@ -451,9 +385,9 @@ def web_change_profile(request, environment, session, username):
     makes changes to <username>'s user object
 
     Possible errortypes are:
-     * 
+     *
     May raise the following Exceptions:
-     * 
+     *
     """
     class changeProfileForm(Form):
         tagline = TextField("Tagline")
@@ -467,8 +401,8 @@ def web_change_profile(request, environment, session, username):
     if request.method == 'POST':
         form = changeProfileForm(request.form)
         # TODO: strip HTML
-        u.tagline = form.tagline.data
-        u.bio = form.bio.data
+        u.identity.tagline = form.tagline.data
+        u.identity.bio = form.bio.data
 
         # avatar
         uploaded = request.files.get('avatar')
@@ -491,30 +425,31 @@ def web_change_profile(request, environment, session, username):
                 image.save(imagepath)
                 thumbnail.save(thumbnailpath)
 
-                u.avatar_url = Configuration().base_url+'assets/'+filename
-                u.avatar_small_url = Configuration().base_url+'assets/thumb_'+filename
+                u.identity.avatar_url = Configuration().base_url+'assets/'+filename
+                u.identity.avatar_small_url = Configuration().base_url+'assets/thumb_'+filename
 
         # TODO: use hash
         if form.password.data != "" and form.password.data == form.password_confirm.data:
             u.passwordhash = form.password.data
-        
+
         session.commit()
         return render_template("web_change_profile.htmljinja", environment, success=True, user=u)
-    
-    else: 
+    else:
         form = changeProfileForm()
-        form.bio.data = u.bio
-        form.tagline.data = u.tagline
+        form.bio.data = u.identity.bio
+        form.tagline.data = u.identity.tagline
         return render_template("web_change_profile.htmljinja", environment, user=u, form=form)
+
+
 @admin
 def admin_view_users(request, environment, session):
     """
     returns all user objects known to the system.
 
     Possible errortypes are:
-     * 
+     *
     May raise the following Exceptions:
-     * 
+     *
     """
 
     users = session.query(model.user).all()
@@ -527,26 +462,27 @@ def admin_create_user(request, environment, session):
     creates a new user and adds it to the database.
 
     Possible errortypes are:
-     * 
+     *
     May raise the following Exceptions:
-     * 
+     *
     """
     class CreateUserForm(Form):
         username = TextField('Username', [validators.Required()])
-        password = TextField('Password', [validators.Required()])    
+        password = TextField('Password', [validators.Required()])
 
     if request.method == 'POST':
         form = CreateUserForm(request.form)
         if form.validate():
             username = form.username.data.strip()
             password = form.password.data
-            u = model.user(name = username, passwordhash = password) #TODO: hash password
+            u = model.user(username,password) #TODO: hash password
+            #session.add(u.identity)
             session.add(u)
             try:
                 session.commit()
             except IntegrityError, e:
                 return render_template("admin_create_user.htmljinja", environment, success=False, form=form)
-            
+
             return redirect('/admin/users/view')
         else:
             return render_template("admin_create_user.htmljinja", environment, success=False, form=form)
@@ -560,13 +496,13 @@ def admin_reset_password(request, environment, session, username):
     resets  <username>'s password
 
     Possible errortypes are:
-     * 
+     *
     May raise the following Exceptions:
-     * 
+     *
     """
     class ResetPasswordForm(Form):
-        password = TextField("password", [validators.Required()])
-    
+         password = TextField("password", [validators.Required()])
+
     u = get_user_obj(username, session)
 
     if request.method == 'POST':
@@ -579,15 +515,15 @@ def admin_reset_password(request, environment, session, username):
         form = ResetPasswordForm()
         return render_template("admin_reset_password.htmljinja", environment, success=False, user=u, form=form)
 
-@admin  
+@admin
 def admin_delete_user(request, environment, session, username):
     """
     deletes <username>'s user object from the database
 
     Possible errortypes are:
-     * 
+     *
     1May raise the following Exceptions:
-     * 
+     *
     """
     # don't delete admin user
     if username == 'admin':
@@ -602,8 +538,8 @@ def admin_delete_user(request, environment, session, username):
     for post in posts:
         session.delete(post)
     # delete friends
-    for friend in user.friends:
-        session.delete(friend)
+    #for friend in user.friends:
+        #session.delete(friend)
     session.delete(user)
     session.commit()
 
@@ -614,8 +550,8 @@ def default(request, environment, session):
     returns an empty dictionary.
 
     Possible errortypes are:
-     * 
+     *
     May raise the following Exceptions:
-     * 
+     *
     """
     return render_template("default.htmljinja", environment)

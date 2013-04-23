@@ -2,7 +2,7 @@
 {% block content %}
 <h1>Change profile</h1>
 {% if success %} Yeay {% endif %}
-<form method="POST" action="" enctype="multipart/form-data">
+<!--<form method="POST" action="" enctype="multipart/form-data">
 <table>
     <tr><td>Tagline</td><td><input type="text" name="tagline" value="{{user.tagline}}"></td></tr>
     <tr><td>Bio</td><td><textarea name="bio">{{user.bio}}</textarea></td></tr>
@@ -10,6 +10,7 @@
     <tr><td>Password</td><td><input type="password" name="password"><br><input type="password" name="password2"></td></tr>
     <tr><td colspan="2"><input type="submit"></td></tr>
 </table>
-</form>
+</form>-->
+{% include "inc_form.htmljinja" %}
 
 {% endblock %}

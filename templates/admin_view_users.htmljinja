@@ -3,10 +3,10 @@
 <h1>Registered Users</h1>
 <ul>
 	{% for user in users %}
-	<li>{{user.name}}
-		{% if user.name != "admin" %}
-		<a href="delete/{{user.name}}">[delete]</a>
-		<a href="resetpassword/{{user.name}}">[reset password]</a>
+	<li>{{user.identity.username}}
+		{% if user.identity.username != "admin" %}
+		<a href="delete/{{user.identity.username}}">[delete]</a>
+		<a href="resetpassword/{{user.identity.username}}">[reset password]</a>
 		{% endif %}
 	</li>
 	{% endfor %}

@@ -1,4 +1,12 @@
 {% extends "web_general.html" %}
 {% block content %}
 {% include "inc_post.htmljinja" %}
+{% if post.reposters|count > 0 %}
+Reposted by:
+<ul>
+    {% for reposter in post.reposters %}
+    <li> {{ reposter.name }}
+    {% endfor %}
+</ul>
+{% endif %}
 {% endblock %}

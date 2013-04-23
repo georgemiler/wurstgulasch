@@ -11,5 +11,10 @@
 	{% endif %}
 	{% if post.description %}{{ post.description }} <br>
 	{% endif %}
-	by user <a href="{{post.origin}}">{{post.origin.split('/')[::-1][0]}}
-</a>
+	by user <a href="../{{post.owner.username}}">{{post.owner.username}}</a>
+    {% if post.reposters|count > 0 %}
+    <br>reposted by:
+    <ul>{% for identity in post.reposters%}
+        <li>{{ identity.username }}
+    {% endfor %}</ul>
+    {% endif %}
