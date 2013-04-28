@@ -13,7 +13,6 @@ import os
 import time
 import json
 
-
 # debug
 # import pdb
 
@@ -21,8 +20,7 @@ from config import Configuration
 import views
 import model
 
-from beaker.middleware import SessionMiddleware, CacheMiddleware
-
+from beaker.middleware import SessionMiddleware
 
 
 class Wurstgulasch:
@@ -36,42 +34,46 @@ class Wurstgulasch:
         # set routing for app
         self.routes = [
             # janitoring
-            ( '/', 'default', 'all' ),
-            ( '/logout', 'web_logout', 'all' ),
-            ( '/login', 'web_login', 'all' ),
+            ('/', 'default', 'all'),
+            ('/logout', 'web_logout', 'all'),
+            ('/login', 'web_login', 'all'),
             # user specific
-            ( '/<username>', 'web_view_user_posts', 'all'),
-            ( '/<username>/add', 'web_insert_post', 'all'),
-            ( '/<username>/add/<plugin_str>', 'web_insert_post', 'user' ),
-            ( '/<username>/page/<page>', 'web_view_user_posts', 'all'),
-            ( '/<username>/json/since/<timestamp>', 'json_since', 'all'),
-            ( '/<username>/json/last/<count>', 'json_last', 'all' ),
-            ( '/<username>/json/info', 'json_user_info', 'all' ),
+            ('/<username>', 'web_view_user_posts', 'all'),
+            ('/<username>/add', 'web_insert_post', 'all'),
+            ('/<username>/add/<plugin_str>', 'web_insert_post', 'user'),
+            ('/<username>/page/<page>', 'web_view_user_posts', 'all'),
+            ('/<username>/json/since/<timestamp>', 'json_since', 'all'),
+            ('/<username>/json/last/<count>', 'json_last', 'all'),
+            ('/<username>/json/info', 'json_user_info', 'all'),
             # posts
-            ( '/<username>/post/<postid>', 'web_view_post_detail', 'user' ),
-            ( '/<username>/repost/<int:post_id>', 'json_repost', 'user'),
-            ( '/<username>/stream/tag/<tagstr>/page/<page>', 'web_view_stream_tag', 'user' ),
-            ( '/<username>/stream', 'web_view_stream', 'user' ),
-            ( '/<username>/stream/tag/<tagstr>', 'web_view_stream_tag', 'user' ),
-            ( '/<username>/stream/page/<page>', 'web_view_stream', 'user' ),
-            ( '/<username>/friends', 'web_view_friends', 'user' ),
-            ( '/<username>/friends/add', 'web_add_friend', 'user' ),
-            ( '/<username>/friends/delete/<int:friendid>', 'web_delete_friend', 'user' ),
-            ( '/<username>/profile', 'web_view_profile', 'all' ),
-            ( '/<username>/profile/change', 'web_change_profile', 'user' ),
-			# admin stuff
-			( '/admin/users/create', 'admin_create_user', 'admin' ),
-			( '/admin/users/view', 'admin_view_users', 'admin' ),
-			( '/admin/users/resetpassword/<username>', 'admin_reset_password', 'admin' ),
-			( '/admin/users/delete/<username>', 'admin_delete_user', 'admin' )
+            ('/<username>/post/<postid>', 'web_view_post_detail', 'user'),
+            ('/<username>/repost/<int:post_id>', 'json_repost', 'user'),
+            ('/<username>/stream/tag/<tagstr>/page/<page>',
+                'web_view_stream_tag', 'user'),
+            ('/<username>/stream', 'web_view_stream', 'user'),
+            ('/<username>/stream/tag/<tagstr>', 'web_view_stream_tag', 'user'),
+            ('/<username>/stream/page/<page>', 'web_view_stream', 'user'),
+            ('/<username>/friends', 'web_view_friends', 'user'),
+            ('/<username>/friends/add', 'web_add_friend', 'user'),
+            ('/<username>/friends/delete/<int:friendid>', 'web_delete_friend',
+                'user'),
+            ('/<username>/profile', 'web_view_profile', 'all'),
+            ('/<username>/profile/change', 'web_change_profile', 'user'),
+            # admin stuff
+            ('/admin/users/create', 'admin_create_user', 'admin'),
+            ('/admin/users/view', 'admin_view_users', 'admin'),
+            ('/admin/users/resetpassword/<username>',
+                'admin_reset_password', 'admin'),
+            ('/admin/users/delete/<username>', 'admin_delete_user', 'admin')
         ]
         self.url_map = Map(
-            [ Rule(x[0], endpoint=x[1]) for x in self.routes]
+            [Rule(x[0], endpoint=x[1]) for x in self.routes]
         )
 
         # set up templates
         self.jinja_env = Environment(
-            loader=FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates')),
+            loader=FileSystemLoader(os.path.join(os.path.dirname(__file__),
+                                    'templates')),
         )
 
         # load content plugins
@@ -94,25 +96,25 @@ class Wurstgulasch:
         for user in users:
             for friend in user.friends:
                 if friend.lastupdated != 0:
-                    url = friend.url+"/json/since/"+str(friend.lastupdated)
+                    url = friend.url + "/json/since/" + str(friend.lastupdated)
                 else:
-                    url = friend.url+"/json/last/100"
+                    url = friend.url + "/json/last/100"
                 file = urlopen(url)
                 dicts = json.load(file)
                 for p in dicts:
                     # hacketihack
                     try:
                         tmp = model.post(
-                            post_id = p['post_id'],
-                            timestamp = p['timestamp'],
-                            origin = p['origin'],
-                            content_type = p['content_type'],
-                            content_string = p['content_string'],
-                            source = p['source'],
-                            description = p['description'],
-                            tags = []
-                            # reference = p['reference'],
-                            # signature = p['signature'],
+                            post_id=p['post_id'],
+                            timestamp=p['timestamp'],
+                            origin=p['origin'],
+                            content_type=p['content_type'],
+                            content_string=p['content_string'],
+                            source=p['source'],
+                            description=p['description'],
+                            tags=[]
+                            # reference=p['reference'],
+                            # signature=p['signature'],
                         )
 
                         tmp.owner = user

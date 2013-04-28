@@ -2,15 +2,17 @@ from PIL import Image
 
 from werkzeug.wrappers import Response
 
-def check_mimetype(mimetype, supported_maintypes,
-        supported_subtypes):
+
+def check_mimetype(mimetype, supported_maintypes, supported_subtypes):
     """
     Checks whether the given mimetype is supported
     """
     mimesplit = mimetype.split('/')
-    if mimesplit[0] not in supported_maintypes or mimesplit[1] not in supported_subtypes:
-        raise Exception("Unsupported mimetype: " + mimetype + ", expected " + supported_maintypes +
-                "/" + supported_subtypes)
+    if mimesplit[0] not in supported_maintypes or mimesplit[1] not in\
+            supported_subtypes:
+        raise Exception("Unsupported mimetype: " + mimetype + ",\
+                        expected " + supported_maintypes + "/" +
+                        supported_subtypes)
     return mimesplit[1]
 
 
@@ -24,6 +26,7 @@ def generate_thumbnail(image, width):
     image.thumbnail((width, hsize), Image.ANTIALIAS)
     return image
 
+
 def force_quadratic(image):
     """
     Forces quadratic geometry on an image
@@ -32,26 +35,30 @@ def force_quadratic(image):
     if width == height:
         return image
     size = min(width, height)
-    delta = (max(width, height)-size)/2
+    delta = (max(width, height) - size) / 2
     if width < height:
-        box = (0, delta, size, size+delta)
+        box = (0, delta, size, size + delta)
     else:
-        box = (delta, 0, size+delta, size)
+        box = (delta, 0, size + delta, size)
     image = image.crop(box)
     return image
+
 
 def get_username(environment):
     """
     gets username from Beaker session in Werkzeug environment. If username is
     not set (which should not be the case, btw!) it returns "guest".
     """
-    beaker_session  = environment['beaker.session']
+
+    beaker_session = environment['beaker.session']
     if 'username' in beaker_session.keys():
         return beaker_session['username']
     else:
         return "guest"
 
-def render_template(template_name, werkzeug_env, mimetype="text/html",  **kwargs):
+
+def render_template(template_name, werkzeug_env, mimetype="text/html",
+                    **kwargs):
     """
     renders **kwargs down to the "template_name" in context of
         werkzeug_env and returns a Werkzeug Response Object
@@ -60,5 +67,6 @@ def render_template(template_name, werkzeug_env, mimetype="text/html",  **kwargs
     jinja_environment = werkzeug_env['jinja_env']
     template = jinja_environment.get_template(template_name)
     username = get_username(werkzeug_env)
-    response = Response(template.render(username=username, **kwargs), content_type=mimetype)
+    response = Response(template.render(username=username, **kwargs),
+                        content_type=mimetype)
     return response

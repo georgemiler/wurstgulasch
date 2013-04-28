@@ -23,7 +23,7 @@ class identity(Base):
 
     def __init__(self, username, wurstgulasch=None, tagline='', bio=''):
         self.username = username
-        if wurstgulasch == None:
+        if wurstgulasch is None:
             #TODO mockup
             self.wurstgulasch = 'localhost'
         else:
@@ -33,7 +33,8 @@ class identity(Base):
 
 user_friends = Table(
     'user_friends', Base.metadata,
-    Column('user_id', Integer, ForeignKey('user.id')), Column('friend_id', Integer, ForeignKey('identity.id'))
+    Column('user_id', Integer, ForeignKey('user.id')),
+    Column('friend_id', Integer, ForeignKey('identity.id'))
 )
 
 
@@ -81,7 +82,8 @@ class post(Base):
     content_type = Column('type', String)
     content_string = Column(String)
     source = Column(String)
-    reposters = relationship('identity', secondary=post_reposters, backref='post')
+    reposters = relationship('identity', secondary=post_reposters,
+                             backref='post')
     # TODO Tags as many to many relation
     tags = relationship('tag', secondary=post_tag, backref='post')
     description = Column(String)
@@ -131,6 +133,7 @@ class post(Base):
 
 # include plugins
 from contenttypes import *
+
 
 class tag(Base):
     __tablename__ = "tag"
