@@ -45,9 +45,10 @@ class Wurstgulasch:
             ('/<username>/json/since/<timestamp>', 'json_since', 'all'),
             ('/<username>/json/last/<count>', 'json_last', 'all'),
             ('/<username>/json/info', 'json_user_info', 'all'),
+            ('/<username>/json/repost/<int:post_id>', 'json_repost', 'user'),
             # posts
             ('/<username>/post/<postid>', 'web_view_post_detail', 'user'),
-            ('/<username>/repost/<int:post_id>', 'json_repost', 'user'),
+            ('/<username>/post/<int:post_id>/repost', 'web_repost', 'user'),
             ('/<username>/stream/tag/<tagstr>/page/<page>',
                 'web_view_stream_tag', 'user'),
             ('/<username>/stream', 'web_view_stream', 'user'),

@@ -1,4 +1,23 @@
-<a href='/{{user.name}}/post/{{post.post_id}}'>{{post.post_id}}</a> ({{post.content_type}}): <br>
+<!-- new stuff
+
+<img src="{{user.identity.avatar_small_url}}" style="float:left;" width="42" height="42">
+<div>
+	{% if post.content_type == "image" %}
+		<a class="fancybox" href="{{post.downcast().image_url}}" title="{{post.downcast().description}}">
+			<img src="{{post.downcast().thumb_url}}">
+		</a>
+	{% endif %}<br>
+    {% if post.tags %} 
+       Tags:
+		{% for tag in post.tags %}
+			<a href="/{{user.name}}/stream/tag/{{tag.tag}}">{{tag.tag}}</a>
+		{% endfor %} 
+    {% endif %}
+</div>
+
+-->
+
+<a href='/{{user.identity.username}}/post/{{post.post_id}}'>{{post.post_id}}</a> ({{post.content_type}}): <br>
 	{% if post.content_type == "image" %}
 		<a class="fancybox" href="{{post.downcast().image_url}}" title="{{post.downcast().description}}">
 			<img src="{{post.downcast().thumb_url}}">
@@ -6,7 +25,7 @@
 	{% endif %}
 	{% if show_tags and post.tags %} Tags:
 		{% for tag in post.tags %}
-			<a href="/{{user.name}}/stream/tag/{{tag.tag}}">{{tag.tag}}</a>
+			<a href="/{{user.identity.username}}/stream/tag/{{tag.tag}}">{{tag.tag}}</a>
 		{% endfor %}<br>
 	{% endif %}
 	{% if post.description %}{{ post.description }} <br>

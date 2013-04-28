@@ -16,7 +16,7 @@ from wtforms import Form, FileField, TextField, validators
 class Plugin(post):
     plugin_description = "Image (Upload)"
 
-    class CreatePostForm(Form):
+    class CreatePostForm(post.BaseForm):
         image = FileField("Image")
         description = TextField("Description")
         description = TextField("Description")
@@ -39,11 +39,10 @@ class Plugin(post):
         )
         self.image_url = image_url
         self.thumb_url = thumb_url
-    
+
     @classmethod
-    def from_request(cls,request):
+    def from_request(cls, form, request):
         # extract form data
-        form = cls.CreatePostForm(request.form) 
         if not form.validate():
             pass
         else:
@@ -51,7 +50,7 @@ class Plugin(post):
 
             # -- store image --
             file_obj = request.files.get('image')
-        
+
             # check mimetype
             mimetype = file_obj.content_type
             filetype = check_mimetype(mimetype, ["image"], ["jpeg", "png", "gif", "tiff"])
@@ -72,7 +71,7 @@ class Plugin(post):
             thumbnail.save(thumbpath)
 
             # generate image URLs
-            image_url = c.base_url+'assets/'+filename          
+            image_url = c.base_url+'assets/'+filename
             thumb_url = c.base_url+'assets/thumb_'+filename
 
             # -- assemble post --
@@ -80,9 +79,9 @@ class Plugin(post):
                 image_url = image_url,
                 thumb_url = thumb_url,
                 source = form.source.data,
-                description = form.description.data                 
+                description = form.description.data
             )
-            
+
             return image_post
 
     def downcast(self):

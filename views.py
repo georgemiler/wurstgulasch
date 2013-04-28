@@ -209,7 +209,7 @@ def web_view_user_posts(request, environment, session, username, page=1,
 
     own = session.query(post).filter(post.owner == u.identity).all()
     reposts = session.query(post).filter(post.reposters.contains(u.identity)).\
-        all()
+        offset(page*posts_per_page).limit(posts_per_page).all()
     allposts = own
     allposts.extend(reposts)
     posts = [p.downcast() for p in allposts]
@@ -319,13 +319,24 @@ def web_insert_post(request, environment, session, username, plugin_str=None):
             # check if plugin actually exists
             if plugin_str not in environment['content_plugins'].keys():
                 raise Exception('Content Plugin not found :(')
+            form = environment['content_plugins'][plugin_str].CreatePostForm(request.form)
             # create post object
             plugin_class = environment['content_plugins'][plugin_str]
-            post_obj = plugin_class.from_request(request)
+            post_obj = plugin_class.from_request(form, request)
 
             # set user and time
             u = get_user_obj(username, session)
             post_obj.owner = u.identity
+            # add tags
+            tag_strings = [ t.strip() for t in request.form['tags'].split(',') ]
+            for tag_str in tag_strings:
+                res = session.query(tag).filter(tag.tag == tag_str).all()
+                if res:
+                    post_obj.tags.append(res[0])
+                else:
+                    new_tag = tag(tag_str)
+                    session.add(new_tag)
+                    post_obj.tags.append(new_tag)
 
             # insert into database
             session.add(post_obj)
@@ -345,6 +356,14 @@ def json_repost(request, environment, session, username, post_id):
     p.reposters.append(u.identity)
     session.commit()
     return Response('{\'success\'=True}')
+
+
+def web_repost(request, environment, session, username, post_id):
+    u = get_user_obj(username, session)
+    p = session.query(model.post).filter(model.post.post_id == post_id).one()
+    p.reposters.append(u.identity)
+    session.commit()
+    return redirect("/" + username + "/post/" + str(post_id))
 
 
 def web_view_post_detail(request, environment, session, username, postid):

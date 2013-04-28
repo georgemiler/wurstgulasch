@@ -10,6 +10,7 @@ Base = declarative_base()
 from sqlalchemy import Column, Integer, String, Table, ForeignKey
 from sqlalchemy.orm import relationship
 
+from wtforms import Form, TextField
 
 class identity(Base):
     __tablename__ = 'identity'
@@ -131,6 +132,10 @@ class post(Base):
         }
 
         return d
+
+    class BaseForm(Form):
+        tags = TextField("Tags")
+
 
 # include plugins
 from contenttypes import *

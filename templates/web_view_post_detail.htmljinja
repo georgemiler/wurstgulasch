@@ -1,12 +1,7 @@
 {% extends "web_general.html" %}
 {% block content %}
 {% include "inc_post.htmljinja" %}
-{% if post.reposters|count > 0 %}
-Reposted by:
-<ul>
-    {% for reposter in post.reposters %}
-    <li> {{ reposter.name }}
-    {% endfor %}
-</ul>
+{% if not user.identity in post.reposters %}
+<br><a href="{{ post.post_id }}/repost">[repost]</a>
 {% endif %}
 {% endblock %}
