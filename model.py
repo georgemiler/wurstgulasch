@@ -24,12 +24,13 @@ class identity(Base):
     def __init__(self, username, wurstgulasch=None, tagline='', bio=''):
         self.username = username
         if wurstgulasch is None:
-            #TODO mockup
-            self.wurstgulasch = 'localhost'
+            self.wurstgulasch = Configuration().base_domain
         else:
             self.wurstgulasch = wurstgulasch
-        self.bio = self.bio
-        self.tagline = self.tagline
+        self.bio = bio
+        self.tagline = tagline
+        self.avatar_url = Configuration().base_url + "assets/default.png"
+        self.avatar_small_url = Configuration().base_url + "assets/default.png"
 
 user_friends = Table(
     'user_friends', Base.metadata,

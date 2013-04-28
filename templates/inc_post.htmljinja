@@ -13,8 +13,10 @@
 	{% endif %}
 	by user <a href="../{{post.owner.username}}">{{post.owner.username}}</a>
     {% if post.reposters|count > 0 %}
-    <br>reposted by:
-    <ul>{% for identity in post.reposters%}
-        <li>{{ identity.username }}
-    {% endfor %}</ul>
+    <br>
+    {% for identity in post.reposters%}
+    <a href="http://{{identity.wurstgulasch}}/{{identity.username}}">
+      <img src="{{ identity.avatar_small_url }}" width="23" height="23">
+    </a>
+    {% endfor %}
     {% endif %}

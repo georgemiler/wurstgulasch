@@ -1,7 +1,7 @@
 {% extends "web_general.html" %}
 {% block content %}
 <h1><a class="fancybox" href="{{user.identity.avatar_url}}">
-	<img src="{{user.identity.avatar_small_url}}"></a>&nbsp;{{user.identity.username}}'s Wurstgulasch
+	<img src="{{user.identity.avatar_small_url}}" width="30" height="30"></a>&nbsp;{{user.identity.username}}'s Wurstgulasch
 </h1>
 <p><i>
 	{{user.identity.tagline}}
