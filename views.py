@@ -193,7 +193,7 @@ def json_user_info(request, environment, session, username):
 
 
 def web_view_user_posts(request, environment, session, username, page=1,
-                        posts_per_page=30):
+                        posts_per_page=15):
     """
     returns the <page> <posts_per_page> posts created by <username> as 'posts',
     <username>'s user object as 'user', an empty array if there aren't any.
@@ -210,18 +210,20 @@ def web_view_user_posts(request, environment, session, username, page=1,
     own = session.query(post.id).filter(post.owner == u.identity).subquery()
     reposts = session.query(post.id).filter(
         post.reposters.contains(u.identity)).subquery()
+    total_num = session.query(model.post).filter(or_(post.id.in_(reposts), post.id.in_(own))).count()
     allposts = session.query(model.post).filter(
-        or_(post.id.in_(reposts), post.id.in_(own))).all()
+        or_(post.id.in_(reposts), post.id.in_(own))).offset((page-1)*posts_per_page).limit(posts_per_page).all()
 
     posts = [p.downcast() for p in allposts]
 
     return render_template("web_view_user_posts.htmljinja", environment,
-                           posts=posts, user=u)
+                           posts=posts, page_num=page, total_num=total_num,
+                           posts_per_page=posts_per_page, user=u)
 
 
 @authorized
 def web_view_stream(request, environment, session, username, page=1,
-                    posts_per_page=30):
+                    posts_per_page=15):
     """
     returns the <page> <posts_per_page> posts created by <username> as 'posts',
     <username>'s user object as 'user', an empty array if there aren't any.
@@ -254,15 +256,21 @@ def web_view_stream(request, environment, session, username, page=1,
     posts = session.query(model.post).\
         filter(or_(model.post.id.in_(friendposts),
                    model.post.id.in_(friendreposts))).\
-        all()
+        offset((page-1)*posts_per_page).limit(posts_per_page).all()
+
+    total_num = session.query(model.post).\
+        filter(or_(model.post.id.in_(friendposts),
+                   model.post.id.in_(friendreposts))).\
+        count()
 
     return render_template("web_view_stream.htmljinja", environment,
-                           posts=posts, user=u)
+                           posts=posts, user=u, page_num=page, total_num=total_num,
+                           posts_per_page=posts_per_page)
 
 
 @authorized
 def web_view_stream_tag(request, environment, session, username, tagstr,
-                        page=1, posts_per_page=1):
+                        page=1, posts_per_page=15):
     """
     returns the <page> <posts_per_page> posts owned by <username> and tagged
     with <tagstr> as 'posts' and the <username>'s user object as 'user'
@@ -283,11 +291,14 @@ def web_view_stream_tag(request, environment, session, username, tagstr,
     res = session.query(tag).filter(tag.tag == tagstr).all()
     if res:
         tag_found = res[0]
-        posts = tag_found.posts
+        posts = tag_found.posts[(page-1)*posts_per_page:page*posts_per_page]
+        total_num = len(tag_found.posts)
     else:
         raise Exception("TagNotFound")
     return render_template("web_view_stream_tag.htmljinja", environment,
-                           posts=posts, tag=tag_found, show_tags=True, user=u)
+                           posts=posts, tag=tag_found, show_tags=True, user=u,
+                           page_num=page, total_num=total_num,
+                           posts_per_page=posts_per_page)
 
 
 @authorized

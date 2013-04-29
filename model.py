@@ -1,5 +1,4 @@
 from config import Configuration
-
 import random
 import time
 
