@@ -2,11 +2,8 @@
 
 <img src="{{user.identity.avatar_small_url}}" style="float:left;" width="42" height="42">
 <div>
-	{% if post.content_type == "image" %}
-		<a class="fancybox" href="{{post.downcast().image_url}}" title="{{post.downcast().description}}">
-			<img src="{{post.downcast().thumb_url}}">
-		</a>
-	{% endif %}<br>
+    {% include "contenttypes/"+post.content_type+".htmljinja" %}
+	<br>
     {% if post.tags %} 
        Tags:
 		{% for tag in post.tags %}

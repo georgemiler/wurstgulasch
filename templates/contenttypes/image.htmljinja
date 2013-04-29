@@ -1,0 +1,5 @@
+{% if post.content_type == "image" %}
+		<a class="fancybox" href="{{post.downcast().image_url}}" title="{{post.downcast().description}}">
+			<img src="{{post.downcast().thumb_url}}">
+		</a>
+{% endif %}
