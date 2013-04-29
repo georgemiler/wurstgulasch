@@ -1,18 +1,28 @@
-<!-- new stuff
-
-<img src="{{user.identity.avatar_small_url}}" style="float:left;" width="42" height="42">
-<div>
-    {% include "contenttypes/"+post.content_type+".htmljinja" %}
+<div style="margin-top: 42px; min-height: 123px;">
+    <img src="{{user.identity.avatar_small_url}}" style="float:left; margin-right: 23px" width="23" height="23">
+    <div style="margin-right: 23px; min-height: 42px;">{% include "contenttypes/"+post.content_type+".htmljinja" %}</div>
+    <div style="float: bottom; margin-left: 46px;">
+    by user <a href="../{{post.owner.username}}">{{post.owner.username}}</a> (<a href="/{{user.identity.username}}/post/{{post.post_id}}">permalink</a>)
 	<br>
     {% if post.tags %} 
-       Tags:
-		{% for tag in post.tags %}
-			<a href="/{{user.name}}/stream/tag/{{tag.tag}}">{{tag.tag}}</a>
+        Tags:
+	    {% for tag in post.tags %}
+			<a href="/{{user.identity.username}}/stream/tag/{{tag.tag}}">{{tag.tag}}</a>
 		{% endfor %} 
     {% endif %}
+    {% if post.reposters|count > 0 %}
+    <br>
+    {% for identity in post.reposters%}
+    <a href="http://{{identity.wurstgulasch}}/{{identity.username}}">
+      <img src="{{ identity.avatar_small_url }}" width="23" height="23">
+    </a>
+    {% endfor %}
+    {% endif %}
+
+    </div>
 </div>
 
--->
+<!-- old stuffz
 
 <a href='/{{user.identity.username}}/post/{{post.post_id}}'>{{post.post_id}}</a> ({{post.content_type}}): <br>
 	{% if post.content_type == "image" %}
@@ -36,3 +46,5 @@
     </a>
     {% endfor %}
     {% endif %}
+
+-->

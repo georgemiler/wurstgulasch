@@ -6,7 +6,7 @@
 <p><i>
 	{{user.identity.tagline}}
 </i></p>
-<ul>
+<ul style="list-style: none;">
 	{% for post in posts %}
 		<li>{% include "inc_post.htmljinja" %}</li>
 	{%endfor%}

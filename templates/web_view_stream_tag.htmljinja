@@ -1,7 +1,7 @@
 {% extends "web_general.html" %}
 {% block content %}
 <h1>Posts tagged with "{{tag.tag}}"</h1>
-<ul>
+<ul style="list-style: none;">
 {% for post in posts %}
 <li>{% include "inc_post.htmljinja" %}</li>
 {% endfor %}
@@ -9,15 +9,14 @@
 <!-- debug 
   page {{page_num}}. {{ total_num }} posts in total.
 -->
-<center>
 {% if total_num - (page_num * posts_per_page ) > 0 %}
-<a href="/{{user.identity.username}}/stream/tag/{{tag.tag}}/page/{{page_num + 1}}"> &lt; older</a>
+<a href="/{{user.identity.username}}/stream/tag/{{tag}}page/{{page_num + 1}}">&lt; older</a>
 {% endif %}
 {% if total_num - (page_num * posts_per_page ) > 0 and page_num > 1 %}
 |
 {% endif %}
 {% if page_num > 1  %}
-<a href="/{{user.identity.username}}/stream/tag/{{tag.tag}}/page/{{page_num - 1}}">newer &gt;</a>
+<a href="./{{page_num - 1}}">newer &gt;</a>
 {% endif %}
 </center>
 

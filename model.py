@@ -82,12 +82,10 @@ class post(Base):
     owner = relationship("identity")
     content_type = Column('type', String)
     content_string = Column(String)
-    source = Column(String)
     reposters = relationship('identity', secondary=post_reposters,
                              backref='post')
     # TODO Tags as many to many relation
     tags = relationship('tag', secondary=post_tag, backref='post')
-    description = Column(String)
     # TODO reference as foreign key
     # signature = Column(String)
 
@@ -97,16 +95,11 @@ class post(Base):
 
     def __init__(
         self, content_type, content_string, post_id=None, timestamp=None,
-        origin=None, source=None, description=None, reference=None,
-        signature=None, tags=[]
-    ):
+            origin=None, reference=None, signature=None, tags=[]):
         self.post_id = post_id or random.randint(1, 2 ** 32)
         self.timestamp = timestamp or int(time.time())
-        self.origin = origin or Configuration().base_url
         self.content_type = content_type
         self.content_string = content_string
-        self.source = source
-        self.description = description
         # self.reference = reference
         # self.signature = signature
 

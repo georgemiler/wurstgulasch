@@ -212,7 +212,7 @@ def web_view_user_posts(request, environment, session, username, page=1,
         post.reposters.contains(u.identity)).subquery()
     total_num = session.query(model.post).filter(or_(post.id.in_(reposts), post.id.in_(own))).count()
     allposts = session.query(model.post).filter(
-        or_(post.id.in_(reposts), post.id.in_(own))).offset((page-1)*posts_per_page).limit(posts_per_page).all()
+        or_(post.id.in_(reposts), post.id.in_(own))).order_by(desc(post.timestamp)).offset((page-1)*posts_per_page).limit(posts_per_page).all()
 
     posts = [p.downcast() for p in allposts]
 
@@ -256,12 +256,15 @@ def web_view_stream(request, environment, session, username, page=1,
     posts = session.query(model.post).\
         filter(or_(model.post.id.in_(friendposts),
                    model.post.id.in_(friendreposts))).\
+        order_by(desc(post.timestamp)).\
         offset((page-1)*posts_per_page).limit(posts_per_page).all()
 
     total_num = session.query(model.post).\
         filter(or_(model.post.id.in_(friendposts),
                    model.post.id.in_(friendreposts))).\
         count()
+
+    posts = [p.downcast() for p in posts]
 
     return render_template("web_view_stream.htmljinja", environment,
                            posts=posts, user=u, page_num=page, total_num=total_num,
@@ -292,6 +295,8 @@ def web_view_stream_tag(request, environment, session, username, tagstr,
     if res:
         tag_found = res[0]
         posts = tag_found.posts[(page-1)*posts_per_page:page*posts_per_page]
+        posts = [p.downcast() for p in posts]
+        posts = sorted(posts, key = lambda p: p.timestamp, reverse=True)
         total_num = len(tag_found.posts)
     else:
         raise Exception("TagNotFound")
@@ -394,6 +399,7 @@ def web_view_post_detail(request, environment, session, username, postid):
     u = get_user_obj(username, session)
 
     p = session.query(model.post).filter(post.post_id == int(postid),).all()[0]
+    p = p.downcast()
     return render_template("web_view_post_detail.htmljinja", environment,
                            post=p, user=u, show_tags=True)
 

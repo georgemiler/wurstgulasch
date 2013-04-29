@@ -1,6 +1,7 @@
 import sys
 sys.path.append('..')
 
+import json
 import os
 from hashlib import md5
 from PIL import Image
@@ -24,21 +25,21 @@ class Plugin(post):
 
     __mapper_args__ = {'polymorphic_identity': "image"}
 
-    def __init__(self, image_url, thumb_url, origin=None, post_id=None, timestamp=None, source=None, description=None, reference=None, signature=None, tags=[]):
+    def __init__(self, image_url, thumb_url, source='', description='', post_id=None,
+                 timestamp=None, reference=None, signature=None, tags=[]):
+        plugin_specifics = { 'image_url': image_url, 'thumb_url': thumb_url, 'source': source, 'description': description }
+
         post.__init__(self,
             post_id=post_id,
             timestamp=timestamp,
-            origin=origin,
             content_type="image",
-            content_string=image_url+";"+thumb_url,
-            source=source,
-            description=description,
+            content_string=json.dumps(plugin_specifics),
             reference=reference,
             signature=signature,
             tags=tags
         )
-        self.image_url = image_url
-        self.thumb_url = thumb_url
+
+        self.downcast()
 
     @classmethod
     def from_request(cls, form, request):
@@ -88,6 +89,9 @@ class Plugin(post):
         """
         wat.
         """
-        self.image_url = self.content_string.split(';')[0]
-        self.thumb_url = self.content_string.split(';')[1]
+        plugin_specifics = json.loads(self.content_string)
+        self.image_url = plugin_specifics['image_url']
+        self.thumb_url = plugin_specifics['thumb_url']
+        self.description = plugin_specifics['description']
+        self.source = plugin_specifics['source']
         return self
