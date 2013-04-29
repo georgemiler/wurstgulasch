@@ -359,8 +359,10 @@ def json_repost(request, environment, session, username, post_id):
 
 @authorized
 def web_repost(request, environment, session, username, post_id):
-    u = get_user_obj(environment['beaker.session']['environment'], session)
+    u = get_user_obj(environment['beaker.session']['username'], session)
     p = session.query(model.post).filter(model.post.post_id == post_id).one()
+    if u.identity.username == p.owner.username:
+        raise Exception('Cannot Repost your own posts.')
     p.reposters.append(u.identity)
     session.commit()
     return redirect("/" + username + "/post/" + str(post_id))

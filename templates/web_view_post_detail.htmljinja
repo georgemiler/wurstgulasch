@@ -1,7 +1,7 @@
 {% extends "web_general.html" %}
 {% block content %}
 {% include "inc_post.htmljinja" %}
-{% if not user.identity in post.reposters %}
+{% if not user.identity in post.reposters and post.owner != user.identity %}
 <br><a href="{{ post.post_id }}/repost">[repost]</a>
 {% endif %}
 {% endblock %}
