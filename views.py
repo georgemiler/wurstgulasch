@@ -207,11 +207,14 @@ def web_view_user_posts(request, environment, session, username, page=1,
 
     u = get_user_obj(username, session)
 
-    own = session.query(post).filter(post.owner == u.identity).all()
-    reposts = session.query(post).filter(post.reposters.contains(u.identity))
-    allposts = own
-    allposts.extend(reposts)
+    own = session.query(post.id).filter(post.owner == u.identity).subquery()
+    reposts = session.query(post.id).filter(
+        post.reposters.contains(u.identity)).subquery()
+    allposts = session.query(model.post).filter(
+        or_(post.id.in_(reposts), post.id.in_(own))).all()
+
     posts = [p.downcast() for p in allposts]
+
     return render_template("web_view_user_posts.htmljinja", environment,
                            posts=posts, user=u)
 
