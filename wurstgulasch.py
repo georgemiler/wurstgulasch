@@ -78,9 +78,9 @@ class Wurstgulasch:
         )
 
         # load content plugins
-        sys.path.append('./contenttypes')
+        sys.path.append(Configuration().base_path + '/contenttypes')
         self.content_plugins = {}
-        filenames = os.listdir('./contenttypes')
+        filenames = os.listdir(Configuration().base_path + '/contenttypes')
         for filename in filenames:
             if filename.endswith('.py') and not filename == '__init__.py':
                 plugin_name = filename[0:-3]

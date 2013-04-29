@@ -208,8 +208,7 @@ def web_view_user_posts(request, environment, session, username, page=1,
     u = get_user_obj(username, session)
 
     own = session.query(post).filter(post.owner == u.identity).all()
-    reposts = session.query(post).filter(post.reposters.contains(u.identity)).\
-        offset(page*posts_per_page).limit(posts_per_page).all()
+    reposts = session.query(post).filter(post.reposters.contains(u.identity))
     allposts = own
     allposts.extend(reposts)
     posts = [p.downcast() for p in allposts]
@@ -358,8 +357,9 @@ def json_repost(request, environment, session, username, post_id):
     return Response('{\'success\'=True}')
 
 
+@authorized
 def web_repost(request, environment, session, username, post_id):
-    u = get_user_obj(username, session)
+    u = get_user_obj(environment['beaker.session']['environment'], session)
     p = session.query(model.post).filter(model.post.post_id == post_id).one()
     p.reposters.append(u.identity)
     session.commit()
