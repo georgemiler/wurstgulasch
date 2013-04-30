@@ -79,8 +79,8 @@ class Plugin(post):
             image_post = cls(
                 image_url = image_url,
                 thumb_url = thumb_url,
-                source = form.source.data,
-                description = form.description.data
+                source = escape_htm(form.source.data),
+                description = escape_html(form.description.data)
             )
 
             return image_post

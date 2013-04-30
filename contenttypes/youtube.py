@@ -2,16 +2,10 @@ import sys
 sys.path.append('..')
 
 import re
-import os
 import json
-from hashlib import md5
-from PIL import Image
-from StringIO import StringIO
 
-
-from config import Configuration
 from model import post
-from util import check_mimetype, generate_thumbnail
+from util import escape_html
 
 from wtforms import Form, TextAreaField, validators
 
@@ -47,7 +41,7 @@ class Plugin(post):
             # -- assemble post --
             video_url = form.video_url.data
             video_id = re.findall('(v=|youtu\.be/)(.*)&?', video_url)[0][1]
-            post = cls(video_id = video_id)
+            post = cls(video_id = escape_html(video_id))
 
 
             return post

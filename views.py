@@ -13,7 +13,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 
 import util
-from util import render_template
+from util import render_template, escape_html
 import model
 from model import tag, post, user, identity
 from config import Configuration
@@ -339,29 +339,34 @@ def web_insert_post(request, environment, session, username, plugin_str=None):
                 raise Exception('Content Plugin not found :(')
             form = environment['content_plugins'][plugin_str].CreatePostForm(request.form)
             # create post object
-            plugin_class = environment['content_plugins'][plugin_str]
-            post_obj = plugin_class.from_request(form, request)
+            if form.validate():
+                plugin_class = environment['content_plugins'][plugin_str]
+                post_obj = plugin_class.from_request(form, request)
 
-            # set user and time
-            u = get_user_obj(username, session)
-            post_obj.owner = u.identity
-            # add tags
-            tag_strings = [ t.strip() for t in request.form['tags'].split(',') ]
-            for tag_str in tag_strings:
-                res = session.query(tag).filter(tag.tag == tag_str).all()
-                if res:
-                    post_obj.tags.append(res[0])
-                else:
-                    new_tag = tag(tag_str)
-                    session.add(new_tag)
-                    post_obj.tags.append(new_tag)
+                # set user and time
+                u = get_user_obj(username, session)
+                post_obj.owner = u.identity
+                # add tags
+                tag_strings = [ t.strip() for t in escape_html(request.form['tags']).split(',') ]
+                for tag_str in tag_strings:
+                    res = session.query(tag).filter(tag.tag == tag_str).all()
+                    if res:
+                        post_obj.tags.append(res[0])
+                    else:
+                        new_tag = tag(tag_str)
+                        session.add(new_tag)
+                        post_obj.tags.append(new_tag)
 
-            # insert into database
-            session.add(post_obj)
-            session.commit()
+                # insert into database
+                session.add(post_obj)
+                session.commit()
 
-            # return to Stream
-            return redirect('/' + username + '/stream')
+                # return to Stream
+                return redirect('/' + username + '/stream')
+            else:
+                return render_template("web_insert_post.htmljinja",
+                                       environment, form=form)
+  
         else:
             # this should not happen
             pass
@@ -509,9 +514,9 @@ def web_change_profile(request, environment, session, username):
 
     if request.method == 'POST':
         form = changeProfileForm(request.form)
-        # TODO: strip HTML
-        u.identity.tagline = form.tagline.data
-        u.identity.bio = form.bio.data
+ 
+        u.identity.tagline = escape_html(form.tagline.data)
+        u.identity.bio = escape_html(form.bio.data)
 
         # avatar
         uploaded = request.files.get('avatar')
@@ -552,8 +557,8 @@ def web_change_profile(request, environment, session, username):
                                success=True, user=u)
     else:
         form = changeProfileForm()
-        form.bio.data = u.identity.bio
-        form.tagline.data = u.identity.tagline
+        form.bio.data = escape_html(u.identity.bio)
+        form.tagline.data = escape_html(u.identity.tagline)
         return render_template("web_change_profile.htmljinja", environment,
                                user=u, form=form)
 

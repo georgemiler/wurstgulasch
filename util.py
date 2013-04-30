@@ -1,7 +1,10 @@
+import re
+
 from PIL import Image
 
 from werkzeug.wrappers import Response
 
+from wtforms.validators import ValidationError
 
 def check_mimetype(mimetype, supported_maintypes, supported_subtypes):
     """
@@ -70,3 +73,15 @@ def render_template(template_name, werkzeug_env, mimetype="text/html",
     response = Response(template.render(username=username, **kwargs),
                         content_type=mimetype)
     return response
+
+
+def escape_html(string):
+    string = re.sub('<', '&lt;', string)
+    string = re.sub('>', '&gt;', string)
+    return string
+
+def tag_validator(form, field):
+    tag_str = [t.strip() for t in field.data.split(',')]
+    for tag in tag_str:
+        if re.match('^[a-zA-Z]*$', tag) is None:
+            raise ValidationError("Only one word per tag is allowed :|")
