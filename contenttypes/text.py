@@ -3,14 +3,9 @@ sys.path.append('..')
 
 import os
 import json
-from hashlib import md5
-from PIL import Image
-from StringIO import StringIO
 
-
-from config import Configuration
 from model import post
-from util import check_mimetype, generate_thumbnail
+from util import escape_html
 
 from wtforms import Form, TextAreaField, validators
 
@@ -43,12 +38,8 @@ class Plugin(post):
         if not form.validate():
             pass
         else:
-            c = Configuration()
-
-            # -- assemble post --
-            image_post = cls(text = form.text.data)
-
-            return image_post
+            text = cls(text = escape_html(form.text.data))
+            return text
 
     def downcast(self):
         """

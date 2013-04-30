@@ -10,6 +10,7 @@ from sqlalchemy import Column, Integer, String, Table, ForeignKey
 from sqlalchemy.orm import relationship
 
 from wtforms import Form, TextField
+from wtforms.validators import ValidationError
 
 class identity(Base):
     __tablename__ = 'identity'
@@ -126,7 +127,8 @@ class post(Base):
         return d
 
     class BaseForm(Form):
-        tags = TextField("Tags")
+        import util
+        tags = TextField("Tags (One word, comma separated)", [util.tag_validator])
 
 
 # include plugins
