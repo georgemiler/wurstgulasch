@@ -12,6 +12,7 @@ from sqlalchemy import desc, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 
+import exc
 import util
 from util import render_template, escape_html
 import model
@@ -71,10 +72,9 @@ def get_user_obj(username, session):
             filter(identity.username == username).one()
 
     except Exception:
-        raise Exception('NoSuchUser')
-
+        raise exc.NoSuchUser
     if not u:
-        raise Exception('NoSuchUser')
+        raise exc.NoSuchUser
     return u
 
 
@@ -104,7 +104,8 @@ def web_login(request, environment, session):
         if form.validate():
             try:
                 user_obj = get_user_obj(form.username.data, session)
-            except Exception:
+            # TODO be more specific
+            except exc.NoSuchUser:
                 return render_template("web_login.htmljinja", environment,
                                        form=form, error="Error: Username \
                                        and password do not match!")
@@ -114,6 +115,11 @@ def web_login(request, environment, session):
                 http_session['username'] = user_obj.identity.username
                 http_session.save()
                 return redirect('/')
+            else:
+                return render_template("web_login.htmljinja", environment,
+                                       form=form, error="Error: Username \
+                                       and password do not match!")
+
         else:
             return render_template("web_login.htmljinja", environment,
                                    form=form)

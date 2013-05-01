@@ -21,6 +21,7 @@ import json
 from config import Configuration
 import views
 import model
+import exc
 
 from beaker.middleware import SessionMiddleware
 
@@ -160,7 +161,11 @@ class Wurstgulasch:
         environment['content_plugins'] = self.content_plugins
 
         view = getattr(views, endpoint)
-        response = view(request, environment, db_session, **values)
+        try:
+            response = view(request, environment, db_session, **values)
+        except exc.NoSuchUser:
+            return Response("lolnope")(environment, start_response)
+
         return response(environment, start_response)
 
     def init_database(self):
