@@ -3,6 +3,8 @@
 from werkzeug import Request
 from werkzeug.routing import Map, Rule
 from werkzeug.wsgi import SharedDataMiddleware
+from werkzeug.wrappers import Response
+from werkzeug.exceptions import NotFound
 
 from sqlalchemy import create_engine
 
@@ -21,7 +23,6 @@ import views
 import model
 
 from beaker.middleware import SessionMiddleware
-
 
 class Wurstgulasch:
     def __init__(self, database_uri):
@@ -138,12 +139,16 @@ class Wurstgulasch:
                 friend.lastupdated = int(time.time())
         session.commit()
 
-    def dispatch_request(self, environment, request):
+
+    def handle_request(self, environment, start_response):
+        request = Request(environment)
         session = environment['beaker.session']
 
         adapter = self.url_map.bind_to_environ(request.environ)
-        endpoint, values = adapter.match()
-
+        try:
+            endpoint, values = adapter.match()
+        except NotFound, e:
+            return Response("lolnope")(environment, start_response)
         # create sqlalchemy session and bind to environment
         db_session = self.session_factory()
         environment['db_session'] = db_session
@@ -155,14 +160,7 @@ class Wurstgulasch:
         environment['content_plugins'] = self.content_plugins
 
         view = getattr(views, endpoint)
-        result = view(request, environment, db_session, **values)
-
-        return result
-
-
-    def handle_request(self, environment, start_response):
-        request = Request(environment)
-        response = self.dispatch_request(environment, request)
+        response = view(request, environment, db_session, **values)
         return response(environment, start_response)
 
     def init_database(self):
