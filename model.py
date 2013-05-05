@@ -1,12 +1,12 @@
 from config import Configuration
 import random
-import time
+from datetime import datetime
 
 # define base for database metadata
 from sqlalchemy.ext.declarative import declarative_base
 Base = declarative_base()
 
-from sqlalchemy import Column, Integer, String, Table, ForeignKey
+from sqlalchemy import Column, Integer, String, Table, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 
 from wtforms import Form, TextField
@@ -70,6 +70,7 @@ post_tag = Table(
 post_reposters = Table(
     'post_reposters', Base.metadata,
     Column('post_id', Integer, ForeignKey('post.id')),
+    Column('repost_date', DateTime),
     Column('identity_id', Integer, ForeignKey('identity.id'))
 )
 
@@ -78,7 +79,7 @@ class post(Base):
     __tablename__ = 'post'
     id = Column(Integer, primary_key=True)
     post_id = Column(Integer)
-    timestamp = Column(Integer)
+    timestamp = Column(DateTime)
     owner_id = Column(Integer, ForeignKey(identity.id))
     owner = relationship("identity")
     content_type = Column('type', String)
@@ -98,7 +99,7 @@ class post(Base):
         self, content_type, content_string, post_id=None, timestamp=None,
             origin=None, reference=None, signature=None, tags=[]):
         self.post_id = post_id or random.randint(1, 2 ** 32)
-        self.timestamp = timestamp or int(time.time())
+        self.timestamp = timestamp or datetime.now()
         self.content_type = content_type
         self.content_string = content_string
         # self.reference = reference

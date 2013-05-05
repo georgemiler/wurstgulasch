@@ -10,7 +10,7 @@ from StringIO import StringIO
 
 from config import Configuration
 from model import post
-from util import check_mimetype, generate_thumbnail
+from util import check_mimetype, generate_thumbnail, escape_html
 
 from wtforms import Form, FileField, TextField, validators
 
@@ -79,7 +79,7 @@ class Plugin(post):
             image_post = cls(
                 image_url = image_url,
                 thumb_url = thumb_url,
-                source = escape_htm(form.source.data),
+                source = escape_html(form.source.data),
                 description = escape_html(form.description.data)
             )
 

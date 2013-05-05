@@ -1,5 +1,5 @@
 import os
-
+import datetime
 from hashlib import md5
 import json
 from PIL import Image
@@ -393,7 +393,12 @@ def web_repost(request, environment, session, username, post_id):
     p = session.query(model.post).filter(model.post.post_id == post_id).one()
     if u.identity.username == p.owner.username:
         raise Exception('Cannot Repost your own posts.')
-    p.reposters.append(u.identity)
+
+    #p.reposters.append(u.identity)
+
+    stmt = model.post_reposters.insert().values(post_id = p.id,
+            identity_id=u.identity.id, repost_date=datetime.datetime.now())
+    session.execute(stmt)
     session.commit()
     return redirect("/" + username + "/post/" + str(post_id))
 
